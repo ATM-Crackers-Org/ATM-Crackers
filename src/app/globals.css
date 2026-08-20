@@ -1,26 +1,175 @@
 @import "tailwindcss";
 
+/* ============================================================
+   SINGAM CRACKERS — Midnight Festive Luxury Design System
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-crimson: #B91C1C;
+  --color-crimson-dark: #7F1D1D;
+  --color-crimson-light: #DC2626;
+  --color-amber: #F59E0B;
+  --color-gold: #FFD166;
+  --color-gold-light: #FEF3C7;
+  --color-midnight: #09090B;
+  --color-surface: #15151A;
+  --color-surface-2: #1C1C24;
+  --color-surface-3: #232330;
+  --color-warm-white: #FAFAF9;
+  --color-text-primary: #18181B;
+  --color-text-secondary: #71717A;
+  --color-text-muted: #A1A1AA;
+  --color-text-ondark: #FAFAFA;
+  --color-border: #E4E4E7;
+  --color-border-dark: #27272A;
+  --color-success: #16A34A;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  --color-crimson: #B91C1C;
+  --color-crimson-dark: #7F1D1D;
+  --color-crimson-light: #DC2626;
+  --color-amber: #F59E0B;
+  --color-gold: #FFD166;
+  --color-gold-light: #FEF3C7;
+  --color-midnight: #09090B;
+  --color-surface: #15151A;
+  --color-surface-2: #1C1C24;
+  --color-surface-3: #232330;
+  --color-warm-white: #FAFAF9;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-ui: "Plus Jakarta Sans", "Inter", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ============================================================
+   Base Setup
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  background-color: var(--color-warm-white);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   Utility Color Classes (Reliable cross-page styling)
+   ============================================================ */
+
+.bg-crimson { background-color: var(--color-crimson) !important; }
+.bg-crimson-dark { background-color: var(--color-crimson-dark) !important; }
+.bg-crimson-light { background-color: var(--color-crimson-light) !important; }
+.bg-gold { background-color: var(--color-gold) !important; }
+.bg-amber { background-color: var(--color-amber) !important; }
+.bg-midnight { background-color: var(--color-midnight) !important; }
+.bg-surface { background-color: var(--color-surface) !important; }
+.bg-surface-2 { background-color: var(--color-surface-2) !important; }
+.bg-warm-white { background-color: var(--color-warm-white) !important; }
+
+.text-crimson { color: var(--color-crimson) !important; }
+.text-crimson-dark { color: var(--color-crimson-dark) !important; }
+.text-gold { color: var(--color-gold) !important; }
+.text-amber { color: var(--color-amber) !important; }
+.text-ondark { color: var(--color-text-ondark) !important; }
+
+.border-crimson { border-color: var(--color-crimson) !important; }
+.border-gold { border-color: var(--color-gold) !important; }
+
+/* ============================================================
+   Linear Gradients (Explicit & Clean)
+   ============================================================ */
+
+.bg-linear-crimson {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 50%, #7F1D1D 100%) !important;
+}
+
+.bg-linear-gold {
+  background: linear-gradient(135deg, #FFD166 0%, #F59E0B 50%, #D97706 100%) !important;
+}
+
+.bg-linear-midnight {
+  background: linear-gradient(180deg, #09090B 0%, #15151A 100%) !important;
+}
+
+.bg-linear-hero {
+  background: radial-gradient(circle at 50% 100%, #7F1D1D 0%, #09090B 75%) !important;
+}
+
+.bg-linear-banner {
+  background: linear-gradient(135deg, #B91C1C 0%, #7F1D1D 60%, #450A0A 100%) !important;
+}
+
+.text-linear-gold {
+  background: linear-gradient(135deg, #FFD166 0%, #F59E0B 50%, #FFD166 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-linear-crimson {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 50%, #7F1D1D 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================================
+   Card & Element Styles
+   ============================================================ */
+
+.product-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.category-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.category-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px -5px rgba(185, 28, 28, 0.15);
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Scrollbar */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@media (max-width: 768px) {
+  .has-mobile-nav {
+    padding-bottom: 70px;
+  }
 }
