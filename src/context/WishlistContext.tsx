@@ -51,7 +51,7 @@ interface WishlistContextValue extends WishlistState {
 
 const WishlistContext = createContext<WishlistContextValue | null>(null);
 
-const STORAGE_KEY = "singam_wishlist";
+const STORAGE_KEY = "atm_wishlist";
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(wishlistReducer, { items: [] });

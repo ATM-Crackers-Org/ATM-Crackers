@@ -28,12 +28,13 @@ const plusJakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Singam Crackers — Premium Sivakasi Fireworks",
-    template: "%s | Singam Crackers",
+    default: "ATM Crackers — Premium Sivakasi Fireworks",
+    template: "%s | ATM Crackers",
   },
   description:
-    "Shop premium Sivakasi crackers and fireworks online. Factory direct quality, secure packaging, and fast delivery. One-sound crackers, fancy shots, sparklers, combo packs and more.",
+    "Shop premium Sivakasi crackers and fireworks online at ATM Crackers. Factory direct wholesale rates, secure packaging, and fast pan-India delivery.",
   keywords: [
+    "ATM Crackers",
     "Sivakasi crackers",
     "fireworks online",
     "Diwali crackers",
@@ -41,10 +42,9 @@ export const metadata: Metadata = {
     "fancy shots",
     "combo packs",
     "flower pots",
-    "Singam Crackers",
   ],
   openGraph: {
-    title: "Singam Crackers — Premium Sivakasi Fireworks",
+    title: "ATM Crackers — Premium Sivakasi Fireworks",
     description: "Premium Sivakasi crackers for unforgettable celebrations.",
     type: "website",
     locale: "en_IN",

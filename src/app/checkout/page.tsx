@@ -59,7 +59,7 @@ export default function CheckoutPage() {
   function handleApplyCoupon() {
     setCouponError("");
     const code = formData.couponCode.trim().toUpperCase();
-    if (code === "FESTIVAL10" || code === "SINGAM10") {
+    if (code === "FESTIVAL10" || code === "ATM10" || code === "ATMCRACKERS") {
       setAppliedCoupon({ code, discountPercent: 10 });
     } else if (code === "DIWALI2025" || code === "FESTIVE15") {
       setAppliedCoupon({ code, discountPercent: 15 });
@@ -198,7 +198,7 @@ export default function CheckoutPage() {
                   📍 Track Your Order
                 </Link>
                 <a
-                  href={`https://wa.me/919999999999?text=Hi%20Singam%20Crackers,%20I%20just%20placed%20order%20${orderId}`}
+                  href={`https://wa.me/919999999999?text=Hi%20ATM%20Crackers,%20I%20just%20placed%20order%20${orderId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-6 py-3.5 bg-[#25D366] text-white font-bold rounded-xl shadow-md hover:bg-[#1ebd5a] transition-colors text-sm inline-flex items-center justify-center gap-2"

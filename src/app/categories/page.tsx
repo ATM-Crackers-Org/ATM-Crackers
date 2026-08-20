@@ -8,7 +8,7 @@ import { CategoryImage } from "@/components/ui/ProductImage";
 
 export const metadata = {
   title: "Categories",
-  description: "Browse all fireworks and cracker categories at Singam Crackers Sivakasi.",
+  description: "Browse all fireworks and cracker categories at ATM Crackers Sivakasi.",
 };
 
 export default function CategoriesPage() {

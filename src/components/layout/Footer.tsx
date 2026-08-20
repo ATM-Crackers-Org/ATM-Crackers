@@ -13,12 +13,16 @@ export function Footer() {
           {/* Col 1: Brand */}
           <div>
             <div className="flex items-center gap-2.5 mb-3.5">
-              <div className="w-9 h-9 bg-linear-crimson rounded-xl flex items-center justify-center text-white text-lg font-black shadow-md">
-                S
+              <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-black flex items-center justify-center p-0.5 border border-zinc-800 shadow-md">
+                <img
+                  src="/images/logo.png"
+                  alt="ATM Crackers Sivakasi"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <span className="text-lg font-display font-black text-white leading-none tracking-tight block">
-                  SINGAM
+                  ATM
                 </span>
                 <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-[0.25em] leading-none block">
                   CRACKERS
@@ -104,7 +108,7 @@ export function Footer() {
                 <span>📞</span> +91 99999 99999 (9 AM – 8 PM)
               </p>
               <p className="flex items-center gap-2">
-                <span>✉️</span> support@singamcrackers.com
+                <span>✉️</span> support@atmcrackers.com
               </p>
             </div>
             <a
@@ -122,7 +126,7 @@ export function Footer() {
       {/* Copyright Bar */}
       <div className="border-t border-zinc-800/80 py-4 bg-black/40">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-zinc-500">
-          <p>© 2025 Singam Crackers, Sivakasi. All rights reserved.</p>
+          <p>© 2025 ATM Crackers, Sivakasi. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <span>Safety Certified</span>
             <span>•</span>

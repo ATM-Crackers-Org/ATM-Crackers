@@ -71,12 +71,17 @@ export function Header() {
 
             {/* Brand Logo */}
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-linear-crimson rounded-xl flex items-center justify-center text-white text-lg font-black shadow-md">
-                S
+              {/* Official Logo Image */}
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center p-0.5 border border-zinc-800 shadow-md">
+                <img
+                  src="/images/logo.png"
+                  alt="ATM Crackers Sivakasi"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <span className="text-lg sm:text-xl font-display font-black text-zinc-900 leading-none tracking-tight block">
-                  SINGAM
+                  ATM
                 </span>
                 <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-[0.25em] leading-none block">
                   CRACKERS

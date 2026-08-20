@@ -45,7 +45,7 @@ export function CustomerReviews() {
             What Our Customers Say
           </h2>
           <p className="text-zinc-500 text-xs sm:text-sm mt-1">
-            10,000+ satisfied families lighting up festivals with Singam Crackers
+            10,000+ satisfied families lighting up festivals with ATM Crackers
           </p>
         </div>
 

@@ -30,7 +30,7 @@ export function WhyChooseUs() {
             OUR SIVAKASI HERITAGE
           </p>
           <h2 className="text-2xl sm:text-3xl font-display font-bold">
-            Why Choose Singam Crackers?
+            Why Choose ATM Crackers?
           </h2>
           <p className="text-zinc-400 text-xs sm:text-sm mt-1">
             Over a decade of trusted fireworks delivery for Tamil Nadu families and events
