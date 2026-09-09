@@ -65,7 +65,7 @@ const icons: Record<ToastType, string> = {
 };
 
 const colors: Record<ToastType, string> = {
-  cart: "border-l-[#B91C1C]",
+  cart: "border-l-crimson",
   wishlist: "border-l-pink-500",
   success: "border-l-green-500",
   error: "border-l-red-500",
@@ -82,13 +82,13 @@ function ToastContainer({
 
   return (
     <div
-      className="fixed bottom-24 right-4 z-[9999] flex flex-col gap-2 md:bottom-8"
+      className="fixed bottom-24 right-4 z-9999 flex flex-col gap-2 md:bottom-8"
       aria-live="polite"
     >
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`flex items-center gap-3 bg-white rounded-xl shadow-xl border border-zinc-100 border-l-4 ${colors[t.type]} px-4 py-3 min-w-[240px] max-w-[320px] animate-slide-up`}
+          className={`flex items-center gap-3 bg-white rounded-xl shadow-xl border border-zinc-100 border-l-4 ${colors[t.type]} px-4 py-3 min-w-60 max-w-[320px] animate-slide-up`}
           role="alert"
         >
           <span className="text-lg shrink-0">{icons[t.type]}</span>

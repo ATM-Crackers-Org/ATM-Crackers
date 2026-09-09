@@ -29,7 +29,7 @@ export function FAQSection() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section className="py-14 sm:py-16 bg-[#FAFAF9]">
+    <section className="py-14 sm:py-16 bg-warm-white">
       <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <p className="text-xs font-bold text-crimson uppercase tracking-widest mb-1">

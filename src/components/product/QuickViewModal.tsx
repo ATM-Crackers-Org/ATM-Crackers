@@ -83,7 +83,7 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
 
         {/* Content */}
         <div className="p-6">
-          <p className="text-xs text-[#B91C1C] font-bold uppercase tracking-widest mb-1">
+          <p className="text-xs text-crimson font-bold uppercase tracking-widest mb-1">
             {product.category_name}
           </p>
           <h2 className="text-xl font-display font-bold text-zinc-900 mb-2">
@@ -121,7 +121,7 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
             <QuantitySelector value={qty} onChange={setQty} size="md" />
             <button
               onClick={handleAddToCart}
-              className="flex-1 py-3 bg-[#B91C1C] text-white text-sm font-bold rounded-2xl hover:bg-[#991B1B] shadow-[0_4px_16px_rgba(185,28,28,0.35)] transition-all"
+              className="flex-1 py-3 bg-crimson text-white text-sm font-bold rounded-2xl hover:bg-[#991B1B] shadow-[0_4px_16px_rgba(185,28,28,0.35)] transition-all"
             >
               🛒 Add to Cart
             </button>
@@ -130,11 +130,10 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
                 toggleWishlist(product);
                 showToast(wishlisted ? "Removed from wishlist" : "Added to wishlist!", "wishlist");
               }}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl border transition-all ${
-                wishlisted
-                  ? "bg-pink-50 border-pink-200 text-pink-500"
-                  : "border-zinc-200 text-zinc-400 hover:border-pink-200 hover:text-pink-500"
-              }`}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl border transition-all ${wishlisted
+                ? "bg-pink-50 border-pink-200 text-pink-500"
+                : "border-zinc-200 text-zinc-400 hover:border-pink-200 hover:text-pink-500"
+                }`}
             >
               {wishlisted ? "♥" : "♡"}
             </button>
@@ -142,7 +141,7 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
 
           <Link
             href={`/product/${product.slug}`}
-            className="block text-center text-sm text-[#B91C1C] font-semibold hover:underline"
+            className="block text-center text-sm text-crimson font-semibold hover:underline"
           >
             View Full Details →
           </Link>

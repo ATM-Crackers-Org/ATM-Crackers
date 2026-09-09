@@ -47,7 +47,7 @@ export function ProductCarousel({
           {viewAllHref && (
             <a
               href={viewAllHref}
-              className="text-sm font-semibold text-[#B91C1C] hover:underline whitespace-nowrap"
+              className="text-sm font-semibold text-crimson hover:underline whitespace-nowrap"
             >
               View all →
             </a>

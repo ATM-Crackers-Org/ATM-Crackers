@@ -16,9 +16,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    "bg-[#B91C1C] text-white hover:bg-[#991B1B] active:bg-[#7F1D1D] shadow-[0_4px_14px_rgba(185,28,28,0.4)] hover:shadow-[0_6px_20px_rgba(185,28,28,0.5)]",
+    "bg-crimson text-white hover:bg-[#991B1B] active:bg-[#7F1D1D] shadow-[0_4px_14px_rgba(185,28,28,0.4)] hover:shadow-[0_6px_20px_rgba(185,28,28,0.5)]",
   secondary:
-    "bg-transparent border-2 border-[#B91C1C] text-[#B91C1C] hover:bg-[#B91C1C] hover:text-white",
+    "bg-transparent border-2 border-crimson text-crimson hover:bg-crimson hover:text-white",
   ghost:
     "bg-transparent border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300",
   gold:
@@ -47,7 +47,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center font-semibold font-[var(--font-ui)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B91C1C] focus-visible:ring-offset-2 select-none";
+    "inline-flex items-center justify-center font-semibold font-[var(--font-ui)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-crimson focus-visible:ring-offset-2 select-none";
 
   return (
     <button

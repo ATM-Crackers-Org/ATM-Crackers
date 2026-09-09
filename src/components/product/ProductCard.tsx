@@ -75,11 +75,10 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         {/* Wishlist toggle */}
         <button
           onClick={handleWishlist}
-          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-sm z-10 transition-all ${
-            wishlisted
-              ? "bg-pink-500 text-white"
-              : "bg-white/90 text-zinc-400 hover:text-pink-500 hover:bg-white"
-          }`}
+          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-sm z-10 transition-all ${wishlisted
+            ? "bg-pink-500 text-white"
+            : "bg-white/90 text-zinc-400 hover:text-pink-500 hover:bg-white"
+            }`}
           aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
           <span className="text-xs">{wishlisted ? "♥" : "♡"}</span>
@@ -136,11 +135,10 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
           <QuantitySelector value={qty} onChange={setQty} size="sm" />
           <button
             onClick={handleAddToCart}
-            className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              inCart
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                : "bg-crimson text-white hover:bg-crimson-dark shadow-sm"
-            }`}
+            className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${inCart
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-crimson text-white hover:bg-crimson-dark shadow-sm"
+              }`}
           >
             {inCart ? "✓ Added" : "+ Add"}
           </button>

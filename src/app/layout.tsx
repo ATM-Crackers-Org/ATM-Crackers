@@ -61,7 +61,7 @@ export default function RootLayout({
       lang="en"
       className={`${playfair.variable} ${inter.variable} ${plusJakarta.variable}`}
     >
-      <body className="min-h-screen bg-[#FAFAF9] font-[var(--font-inter)] antialiased">
+      <body className="min-h-screen bg-warm-white font-[var(--font-inter)] antialiased">
         <ToastProvider>
           <CartProvider>
             <WishlistProvider>{children}</WishlistProvider>

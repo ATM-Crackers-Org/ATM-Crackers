@@ -1,32 +1,114 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { searchProducts } from "@/lib/products";
 import type { Product } from "@/lib/products";
+import { FaSearch } from "react-icons/fa";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Shop", href: "/shop" },
+  { label: "Products", href: "/shop" },
   { label: "Categories", href: "/categories" },
-  { label: "Offers", href: "/shop?filter=deals" },
   { label: "Combos", href: "/shop?filter=combos" },
-  { label: "Best Sellers", href: "/shop?filter=bestsellers" },
-  { label: "Track Order", href: "/track-order" },
 ];
+
+function useIsActiveNav() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const filter = searchParams?.get("filter") || "";
+
+  return useCallback(
+    (href: string) => {
+      if (href === "/") {
+        return pathname === "/";
+      }
+      if (href === "/categories") {
+        return pathname === "/categories" || pathname.startsWith("/categories/");
+      }
+      if (href === "/shop?filter=combos") {
+        return (pathname === "/shop" && filter === "combos") || pathname.startsWith("/combos");
+      }
+      if (href === "/shop") {
+        return (
+          (pathname === "/shop" && filter !== "combos") ||
+          pathname.startsWith("/product/")
+        );
+      }
+      return pathname === href;
+    },
+    [pathname, filter]
+  );
+}
+
+function DesktopNavLinks() {
+  const isActive = useIsActiveNav();
+
+  return (
+    <nav className="hidden md:flex items-center gap-1.5">
+      {NAV_LINKS.map((l) => {
+        const active = isActive(l.href);
+        return (
+          <Link
+            key={l.href}
+            href={l.href}
+            className={`px-3.5 py-2 text-xs lg:text-sm font-semibold rounded-xl transition-all ${active
+              ? "text-crimson bg-red-50/90 font-bold border border-red-200/80 shadow-xs"
+              : "text-zinc-700 hover:text-crimson hover:bg-zinc-50 font-medium"
+              }`}
+          >
+            {l.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function MobileNavLinks({ onSelect }: { onSelect: () => void }) {
+  const isActive = useIsActiveNav();
+
+  return (
+    <div className="md:hidden border-t border-zinc-200 bg-white px-4 py-3 space-y-1">
+      {NAV_LINKS.map((l) => {
+        const active = isActive(l.href);
+        return (
+          <Link
+            key={l.href}
+            href={l.href}
+            onClick={onSelect}
+            className={`block px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${active
+              ? "text-crimson bg-red-50 font-bold border-l-4 border-crimson"
+              : "text-zinc-800 hover:text-crimson hover:bg-zinc-50"
+              }`}
+          >
+            {l.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const { count: cartCount } = useCart();
   const { count: wishlistCount } = useWishlist();
+
+  const searchResults: Product[] = useMemo(() => {
+    if (searchQuery.length >= 2) {
+      return searchProducts(searchQuery).slice(0, 6);
+    }
+    return [];
+  }, [searchQuery]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -40,23 +122,14 @@ export function Header() {
     }
   }, [searchOpen]);
 
-  useEffect(() => {
-    if (searchQuery.length >= 2) {
-      setSearchResults(searchProducts(searchQuery).slice(0, 6));
-    } else {
-      setSearchResults([]);
-    }
-  }, [searchQuery]);
-
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-200 ${
-        scrolled
-          ? "bg-white/95 backdrop-blur-md shadow-md"
-          : "bg-white"
-      } border-b border-zinc-200`}
+      className={`sticky top-0 z-50 transition-all duration-200 ${scrolled
+        ? "bg-white/95 backdrop-blur-md shadow-md"
+        : "bg-white"
+        } border-b border-zinc-200`}
     >
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-360 mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
 
           {/* Left: Mobile hamburger + Logo */}
@@ -91,35 +164,24 @@ export function Header() {
           </div>
 
           {/* Center: Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="px-3.5 py-2 text-xs lg:text-sm font-semibold text-zinc-700 hover:text-crimson hover:bg-zinc-50 rounded-xl transition-colors"
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
+          <Suspense fallback={<nav className="hidden md:flex items-center gap-1 w-48" />}>
+            <DesktopNavLinks />
+          </Suspense>
 
-          {/* Right: Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Search Toggle */}
             <div className="relative">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
                 className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-zinc-600 hover:text-crimson hover:bg-zinc-50 rounded-xl transition-colors"
                 aria-label="Search"
               >
-                <span className="text-base">🔍</span>
+                <span className="text-base"><FaSearch /></span>
               </button>
 
-              {/* Search dropdown */}
               {searchOpen && (
-                <div className="absolute right-0 top-12 w-[300px] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden z-50 animate-slide-down">
+                <div className="absolute right-0 top-12 w-75 sm:w-90 bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden z-50 animate-slide-down">
                   <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-100">
-                    <span className="text-zinc-400 text-sm">🔍</span>
+                    <span className="text-zinc-400 text-md"><FaSearch /></span>
                     <input
                       ref={searchRef}
                       type="text"
@@ -209,18 +271,9 @@ export function Header() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-zinc-200 bg-white px-4 py-3 space-y-1">
-          {NAV_LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-zinc-800 hover:text-crimson hover:bg-zinc-50 rounded-xl transition-colors"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </div>
+        <Suspense fallback={<div className="md:hidden border-t border-zinc-200 bg-white px-4 py-3" />}>
+          <MobileNavLinks onSelect={() => setMobileMenuOpen(false)} />
+        </Suspense>
       )}
 
       {/* Backdrop for open search */}
