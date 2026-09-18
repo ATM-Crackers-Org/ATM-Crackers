@@ -1,6 +1,3 @@
-import rawCategories from "@/data/crackersCategory.js";
-import { getEnrichedProducts } from "./products";
-
 export interface RawCategory {
   id: string;
   name: string;
@@ -19,7 +16,7 @@ export interface Category extends RawCategory {
 }
 
 // Category gradient and accent mapping based on name keywords
-function getCategoryStyle(name: string): {
+export function getCategoryStyle(name: string): {
   icon: string;
   gradient: string;
   accent: string;
@@ -114,41 +111,4 @@ function getCategoryStyle(name: string): {
     gradient: "from-crimson to-[#7F1D1D]",
     accent: "#B91C1C",
   };
-}
-
-let _enrichedCategories: Category[] | null = null;
-
-export function getEnrichedCategories(): Category[] {
-  if (_enrichedCategories) return _enrichedCategories;
-
-  const products = getEnrichedProducts();
-  const countMap = new Map<string, number>();
-  for (const p of products) {
-    countMap.set(p.category_id, (countMap.get(p.category_id) ?? 0) + 1);
-  }
-
-  _enrichedCategories = (rawCategories as RawCategory[])
-    .filter((c) => c.is_active)
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((c) => ({
-      ...c,
-      product_count: countMap.get(c.id) ?? 0,
-      ...getCategoryStyle(c.name),
-    }));
-
-  return _enrichedCategories;
-}
-
-export function getCategoryBySlug(slug: string): Category | undefined {
-  return getEnrichedCategories().find((c) => c.slug === slug);
-}
-
-export function getCategoryById(id: string): Category | undefined {
-  return getEnrichedCategories().find((c) => c.id === id);
-}
-
-export function getTopCategories(limit = 8): Category[] {
-  return getEnrichedCategories()
-    .filter((c) => c.product_count > 0)
-    .slice(0, limit);
 }

@@ -1,11 +1,25 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
-import { getEnrichedProducts, formatPrice } from "@/lib/products";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { formatPrice } from "@/lib/products";
 import type { Product } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { ProductImage } from "@/components/ui/ProductImage";
+import {
+  FaUsers,
+  FaGift,
+  FaCrown,
+  FaFire,
+  FaPalette,
+  FaVolumeHigh,
+  FaStar,
+  FaWandMagicSparkles,
+  FaArrowsRotate,
+  FaBoxOpen,
+  FaCartShopping,
+} from "react-icons/fa6";
+import { IoSparkles, IoClose } from "react-icons/io5";
 
 const BUDGETS = [
   { label: "₹500", value: 500 },
@@ -15,27 +29,27 @@ const BUDGETS = [
 ];
 
 const CELEBRATIONS = [
-  { label: "Family", emoji: "👨‍👩‍👧‍👦", desc: "Balanced for all ages" },
-  { label: "Kids", emoji: "🎉", desc: "Safe, visual & low-noise" },
-  { label: "Premium", emoji: "👑", desc: "Aerial & deluxe assortments" },
-  { label: "Grand", emoji: "🎆", desc: "Maximum sound & sky bursts" },
+  { label: "Family", icon: FaUsers, desc: "Balanced for all ages" },
+  { label: "Kids", icon: FaGift, desc: "Safe, visual & low-noise" },
+  { label: "Premium", icon: FaCrown, desc: "Aerial & deluxe assortments" },
+  { label: "Grand", icon: FaFire, desc: "Maximum sound & sky bursts" },
 ];
 
 const PREFERENCES = [
-  { label: "Colour", emoji: "🌈", desc: "Vibrant lights & sparklers" },
-  { label: "Sound", emoji: "💥", desc: "Loud bursts & crackers" },
-  { label: "Mixed", emoji: "🎇", desc: "Perfect lights & sounds" },
-  { label: "Fancy", emoji: "✨", desc: "Novelties & aerial shots" },
+  { label: "Colour", icon: FaPalette, desc: "Vibrant lights & sparklers" },
+  { label: "Sound", icon: FaVolumeHigh, desc: "Loud bursts & crackers" },
+  { label: "Mixed", icon: IoSparkles, desc: "Perfect lights & sounds" },
+  { label: "Fancy", icon: FaStar, desc: "Novelties & aerial shots" },
 ];
 
 // Helper: Smart custom box generator with filtering, scoring, and shuffling
 function assembleSmartBox(
+  all: Product[],
   targetBudget: number,
   celebration: string,
   preference: string,
   seed = 0
 ): Product[] {
-  const all = getEnrichedProducts();
   if (!all.length) return [];
 
   // Filter and score candidates based on celebration & preference
@@ -207,40 +221,59 @@ function assembleSmartBox(
 }
 
 export function BuildCombo() {
-  const [budget, setBudget] = useState<number>(1000);
-  const [celebration, setCelebration] = useState<string>("Family");
-  const [preference, setPreference] = useState<string>("Mixed");
-  const [shuffleSeed, setShuffleSeed] = useState<number>(1);
+  const [budget, setBudget] = useState(1000);
+  const [celebration, setCelebration] = useState("Family");
+  const [preference, setPreference] = useState("Mixed");
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [seed, setSeed] = useState(0);
   const [removedSlugs, setRemovedSlugs] = useState<string[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
 
   const { addToCart } = useCart();
   const { showToast } = useToast();
 
-  const handleShuffle = useCallback(() => {
-    setIsShuffling(true);
-    setShuffleSeed((s) => s + 1);
-    setRemovedSlugs([]);
-    setTimeout(() => setIsShuffling(false), 200);
+  useEffect(() => {
+    let mounted = true;
+    import("@/services/product.service").then(({ getProducts }) => {
+      getProducts().then((res) => {
+        if (mounted && res) {
+          import("@/utils/product.adapter").then(({ adaptApiProducts }) => {
+            if (mounted) setCatalog(adaptApiProducts(res));
+          });
+        }
+      });
+    });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const baseItems = useMemo(() => {
-    return assembleSmartBox(budget, celebration, preference, shuffleSeed);
-  }, [budget, celebration, preference, shuffleSeed]);
+  // Compute recommended combo
+  const rawCombo = useMemo(() => {
+    return assembleSmartBox(catalog, budget, celebration, preference, seed);
+  }, [catalog, budget, celebration, preference, seed]);
 
+  // Filter out manually removed items
   const combo = useMemo(() => {
-    return baseItems.filter((p) => !removedSlugs.includes(p.slug));
-  }, [baseItems, removedSlugs]);
+    return rawCombo.filter((p) => !removedSlugs.includes(p.slug));
+  }, [rawCombo, removedSlugs]);
 
-  function handleRemoveItem(slug: string) {
+  const handleShuffle = useCallback(() => {
+    setIsShuffling(true);
+    setRemovedSlugs([]);
+    setSeed((prev) => prev + 1);
+    setTimeout(() => setIsShuffling(false), 300);
+  }, []);
+
+  const handleRemoveItem = useCallback((slug: string) => {
     setRemovedSlugs((prev) => [...prev, slug]);
-  }
+  }, []);
 
-  function handleAddAll() {
+  const handleAddAll = useCallback(() => {
     if (!combo.length) return;
     combo.forEach((p) => addToCart(p, 1));
-    showToast(`Added ${combo.length} items from your custom box to cart!`, "cart");
-  }
+    showToast(`Added entire custom box (${combo.length} items) to your cart!`, "cart");
+  }, [combo, addToCart, showToast]);
 
   const comboTotal = useMemo(
     () => combo.reduce((sum, p) => sum + p.price, 0),
@@ -261,8 +294,8 @@ export function BuildCombo() {
         <div className="max-w-3xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <p className="text-xs font-bold text-crimson uppercase tracking-widest mb-1">
-              ✨ SMART SELECTION ASSISTANT
+            <p className="text-xs font-bold text-crimson uppercase tracking-widest mb-1 flex items-center justify-center gap-1.5">
+              <FaWandMagicSparkles /> SMART SELECTION ASSISTANT
             </p>
             <h2 className="text-2xl sm:text-3xl font-display font-bold text-zinc-900">
               Build Your Celebration Box
@@ -310,29 +343,32 @@ export function BuildCombo() {
                 2. Celebration Type
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {CELEBRATIONS.map((c) => (
-                  <button
-                    key={c.label}
-                    type="button"
-                    onClick={() => {
-                      setCelebration(c.label);
-                      setRemovedSlugs([]);
-                    }}
-                    className={`py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all flex flex-col items-center gap-1 cursor-pointer text-center ${celebration === c.label
-                      ? "bg-crimson text-white border-crimson shadow-sm scale-[1.02]"
-                      : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300"
-                      }`}
-                  >
-                    <span className="text-base">{c.emoji}</span>
-                    <span className="text-xs font-bold leading-tight">{c.label}</span>
-                    <span
-                      className={`text-[10px] line-clamp-1 font-normal ${celebration === c.label ? "text-white/80" : "text-zinc-400"
+                {CELEBRATIONS.map((c) => {
+                  const Icon = c.icon;
+                  return (
+                    <button
+                      key={c.label}
+                      type="button"
+                      onClick={() => {
+                        setCelebration(c.label);
+                        setRemovedSlugs([]);
+                      }}
+                      className={`py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all flex flex-col items-center gap-1 cursor-pointer text-center ${celebration === c.label
+                        ? "bg-crimson text-white border-crimson shadow-sm scale-[1.02]"
+                        : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300"
                         }`}
                     >
-                      {c.desc}
-                    </span>
-                  </button>
-                ))}
+                      <Icon className="text-base" />
+                      <span className="text-xs font-bold leading-tight">{c.label}</span>
+                      <span
+                        className={`text-[10px] line-clamp-1 font-normal ${celebration === c.label ? "text-white/80" : "text-zinc-400"
+                          }`}
+                      >
+                        {c.desc}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -342,29 +378,32 @@ export function BuildCombo() {
                 3. Cracker Preference
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {PREFERENCES.map((p) => (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => {
-                      setPreference(p.label);
-                      setRemovedSlugs([]);
-                    }}
-                    className={`py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all flex flex-col items-center gap-1 cursor-pointer text-center ${preference === p.label
-                      ? "bg-crimson text-white border-crimson shadow-sm scale-[1.02]"
-                      : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300"
-                      }`}
-                  >
-                    <span className="text-base">{p.emoji}</span>
-                    <span className="text-xs font-bold leading-tight">{p.label}</span>
-                    <span
-                      className={`text-[10px] line-clamp-1 font-normal ${preference === p.label ? "text-white/80" : "text-zinc-400"
+                {PREFERENCES.map((p) => {
+                  const Icon = p.icon;
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        setPreference(p.label);
+                        setRemovedSlugs([]);
+                      }}
+                      className={`py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all flex flex-col items-center gap-1 cursor-pointer text-center ${preference === p.label
+                        ? "bg-crimson text-white border-crimson shadow-sm scale-[1.02]"
+                        : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300"
                         }`}
                     >
-                      {p.desc}
-                    </span>
-                  </button>
-                ))}
+                      <Icon className="text-base" />
+                      <span className="text-xs font-bold leading-tight">{p.label}</span>
+                      <span
+                        className={`text-[10px] line-clamp-1 font-normal ${preference === p.label ? "text-white/80" : "text-zinc-400"
+                          }`}
+                      >
+                        {p.desc}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -376,7 +415,8 @@ export function BuildCombo() {
                 disabled={isShuffling}
                 className="flex-1 py-3 bg-crimson text-white font-bold rounded-xl shadow-md hover:bg-[#991B1B] transition-all text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-98"
               >
-                <span>✨ Generate My Custom Box</span>
+                <FaWandMagicSparkles />
+                <span>Generate My Custom Box</span>
               </button>
 
               <button
@@ -385,7 +425,7 @@ export function BuildCombo() {
                 title="Shuffle products in this box"
                 className="px-4 py-3 bg-zinc-100 text-zinc-800 hover:bg-zinc-200 border border-zinc-200 font-bold rounded-xl transition-all text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer active:scale-98 shrink-0"
               >
-                <span className={`text-base ${isShuffling ? "animate-spin" : ""}`}>🔀</span>
+                <FaArrowsRotate className={`text-sm ${isShuffling ? "animate-spin" : ""}`} />
                 <span className="hidden sm:inline">Shuffle Items</span>
               </button>
             </div>
@@ -398,7 +438,7 @@ export function BuildCombo() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-zinc-800">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">🎁</span>
+                    <FaBoxOpen className="text-lg text-amber-400" />
                     <h3 className="text-base sm:text-lg font-display font-bold text-amber-300">
                       Your Recommended Celebration Box
                     </h3>
@@ -416,9 +456,10 @@ export function BuildCombo() {
                   <button
                     type="button"
                     onClick={handleShuffle}
-                    className="text-xs text-amber-400 hover:text-amber-300 font-semibold px-2.5 py-1 rounded-lg bg-amber-400/10 hover:bg-amber-400/20 transition-colors flex items-center gap-1 cursor-pointer"
+                    className="text-xs text-amber-400 hover:text-amber-300 font-semibold px-2.5 py-1 rounded-lg bg-amber-400/10 hover:bg-amber-400/20 transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
-                    <span>🔀 Shuffle</span>
+                    <FaArrowsRotate className={`text-xs ${isShuffling ? "animate-spin" : ""}`} />
+                    <span>Shuffle</span>
                   </button>
                 </div>
               </div>
@@ -460,6 +501,7 @@ export function BuildCombo() {
                           sku={p.sku}
                           size="thumb"
                           showLabel={false}
+                          imageUrl={p.images?.[0]}
                         />
                       </div>
                       <div className="min-w-0">
@@ -490,9 +532,9 @@ export function BuildCombo() {
                         type="button"
                         onClick={() => handleRemoveItem(p.slug)}
                         title="Remove from custom box"
-                        className="text-zinc-500 hover:text-red-400 text-xs p-1 rounded hover:bg-white/5 transition-colors"
+                        className="text-zinc-500 hover:text-red-400 text-sm p-1 rounded hover:bg-white/5 transition-colors cursor-pointer"
                       >
-                        ✕
+                        <IoClose />
                       </button>
                     </div>
                   </div>
@@ -523,7 +565,8 @@ export function BuildCombo() {
                   onClick={handleAddAll}
                   className="w-full py-3.5 bg-linear-to-r from-amber-400 to-amber-500 text-zinc-950 font-bold rounded-xl shadow-lg hover:brightness-105 active:scale-98 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>🛒 Add Entire Box to Cart ({formatPrice(comboTotal)})</span>
+                  <FaCartShopping />
+                  <span>Add Entire Box to Cart ({formatPrice(comboTotal)})</span>
                 </button>
               </div>
             </div>

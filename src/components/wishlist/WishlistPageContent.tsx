@@ -1,18 +1,37 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { ProductGrid } from "@/components/product/ProductGrid";
-import { getHotDeals } from "@/lib/products";
+import type { Product } from "@/lib/products";
+import { getProducts } from "@/services/product.service";
+import { adaptApiProducts } from "@/utils/product.adapter";
+import { FaCartShopping, FaHeart } from "react-icons/fa6";
+import { LuSparkles } from "react-icons/lu";
 
 export function WishlistPageContent() {
   const { items } = useWishlist();
   const { addToCart } = useCart();
   const { showToast } = useToast();
-  const recommendations = getHotDeals(4);
+  const [recommendations, setRecommendations] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    getProducts()
+      .then((data) => {
+        if (mounted && data) {
+          setRecommendations(adaptApiProducts(data).slice(0, 4));
+        }
+      })
+      .catch(() => { });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function handleAddAllToCart() {
     if (items.length === 0) return;
@@ -42,9 +61,9 @@ export function WishlistPageContent() {
           {items.length > 0 && (
             <button
               onClick={handleAddAllToCart}
-              className="px-5 py-2.5 bg-crimson text-white text-xs font-bold rounded-xl shadow-md hover:bg-[#991B1B] transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 bg-crimson text-white text-xs font-bold rounded-xl shadow-md hover:bg-[#991B1B] transition-colors cursor-pointer"
             >
-              🛒 Move All to Cart
+              <FaCartShopping /> Move All to Cart
             </button>
           )}
         </div>
@@ -53,18 +72,20 @@ export function WishlistPageContent() {
           <ProductGrid products={items} cols={4} />
         ) : (
           <div className="text-center py-16 bg-white rounded-3xl border border-zinc-100 p-8 max-w-lg mx-auto mb-12 shadow-sm">
-            <span className="text-5xl block mb-3">🤍</span>
+            <div className="w-16 h-16 bg-pink-50 text-pink-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+              <FaHeart />
+            </div>
             <h2 className="text-xl font-bold text-zinc-900 mb-2">
               Your wishlist is empty
             </h2>
             <p className="text-sm text-zinc-500 mb-6">
-              Explore our rich catalogue of 191+ Sivakasi crackers and tap the heart icon on items you love.
+              Explore our rich catalogue of Sivakasi crackers and tap the heart icon on items you love.
             </p>
             <Link
               href="/shop"
               className="inline-flex items-center gap-2 px-6 py-3 bg-crimson text-white font-bold rounded-xl shadow-md hover:bg-[#991B1B] transition-colors text-sm"
             >
-              Explore All Crackers
+              <LuSparkles /> Explore All Crackers
             </Link>
           </div>
         )}

@@ -42,15 +42,12 @@
   --font-ui: "Plus Jakarta Sans", "Inter", sans-serif;
 }
 
-/* ============================================================
-   Base Setup
-   ============================================================ */
 
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
-html {
+html[data-scroll-behavior="smooth"] {
   scroll-behavior: smooth;
 }
 

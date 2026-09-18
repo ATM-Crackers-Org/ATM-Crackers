@@ -59,9 +59,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${playfair.variable} ${inter.variable} ${plusJakarta.variable}`}
     >
-      <body className="min-h-screen bg-warm-white font-[var(--font-inter)] antialiased">
+      <body className="min-h-screen bg-warm-white font-(--font-inter) antialiased">
         <ToastProvider>
           <CartProvider>
             <WishlistProvider>{children}</WishlistProvider>

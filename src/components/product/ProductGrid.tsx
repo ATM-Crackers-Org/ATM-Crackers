@@ -5,6 +5,7 @@ import type { Product } from "@/lib/products";
 import { ProductCard } from "./ProductCard";
 import { QuickViewModal } from "./QuickViewModal";
 import { ProductGridSkeleton } from "@/components/ui/Skeleton";
+import { FaFire } from "react-icons/fa6";
 
 interface ProductGridProps {
   products: Product[];
@@ -26,7 +27,9 @@ export function ProductGrid({
   if (products.length === 0) {
     return (
       <div className="text-center py-20">
-        <p className="text-5xl mb-4">🎆</p>
+        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-zinc-400">
+          <FaFire />
+        </div>
         <h3 className="text-lg font-semibold text-zinc-700 mb-2">
           No products found
         </h3>

@@ -25,13 +25,13 @@ export default function HomePage() {
         <TrustBar />
         <CategoryGrid />
         <HotDeals />
-        <ComboPacks />
-        <BudgetSection />
-        <BestSellers />
+        {/* <ComboPacks /> */}
+        {/* <BudgetSection /> */}
+        {/* <BestSellers /> */}
         <PromoBanner />
-        <BuildCombo />
+        {/* <BuildCombo /> */}
         <WhyChooseUs />
-        <CustomerReviews />
+        {/* <CustomerReviews /> */}
         <FAQSection />
       </main>
       <Footer />

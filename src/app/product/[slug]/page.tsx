@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { ProductDetailPageContent } from "@/components/product/ProductDetailPageContent";
-import { getProductBySlug } from "@/lib/products";
+import { getProductByIdentifier } from "@/services/product.service";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -12,10 +12,22 @@ interface Props {
 
 export async function generateMetadata({ params }: Props) {
   const resolvedParams = await params;
-  const product = getProductBySlug(resolvedParams.slug);
+  let name: string | undefined;
+
+  try {
+    const apiProd = await getProductByIdentifier(resolvedParams.slug);
+    if (apiProd?.name) {
+      name = apiProd.name;
+    }
+  } catch {
+    // API failure fallback
+  }
+
   return {
-    title: product ? `${product.name} | ATM Crackers` : "Product | ATM Crackers",
-    description: product ? `Buy ${product.name} at Sivakasi factory direct price.` : "Authentic Sivakasi fireworks.",
+    title: name ? `${name} | ATM Crackers` : "Product | ATM Crackers",
+    description: name
+      ? `Buy ${name} at Sivakasi factory direct wholesale price from ATM Crackers.`
+      : "Authentic Sivakasi fireworks at factory direct wholesale prices.",
   };
 }
 

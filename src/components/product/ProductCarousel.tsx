@@ -72,7 +72,7 @@ export function ProductCarousel({
           className="flex gap-3 overflow-x-auto no-scrollbar pb-2"
         >
           {products.map((p) => (
-            <div key={p.slug} className="w-[220px] md:w-[240px] flex-shrink-0">
+            <div key={p.slug} className="w-55 md:w-60 shrink-0">
               <ProductCard product={p} onQuickView={setQuickViewProduct} />
             </div>
           ))}

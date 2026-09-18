@@ -1,25 +1,25 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { searchProducts } from "@/lib/products";
 import type { Product } from "@/lib/products";
-import { FaSearch } from "react-icons/fa";
+import { getProducts } from "@/services/product.service";
+import { adaptApiProducts } from "@/utils/product.adapter";
+import { FaSearch, FaBars, FaDownload, FaFilePdf, FaFire } from "react-icons/fa";
+import { FaCartShopping, FaRegHeart } from "react-icons/fa6";
+import { IoClose } from "react-icons/io5";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "Products", href: "/shop" },
   { label: "Categories", href: "/categories" },
-  { label: "Combos", href: "/shop?filter=combos" },
 ];
 
 function useIsActiveNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const filter = searchParams?.get("filter") || "";
 
   return useCallback(
     (href: string) => {
@@ -29,18 +29,12 @@ function useIsActiveNav() {
       if (href === "/categories") {
         return pathname === "/categories" || pathname.startsWith("/categories/");
       }
-      if (href === "/shop?filter=combos") {
-        return (pathname === "/shop" && filter === "combos") || pathname.startsWith("/combos");
-      }
       if (href === "/shop") {
-        return (
-          (pathname === "/shop" && filter !== "combos") ||
-          pathname.startsWith("/product/")
-        );
+        return pathname === "/shop" || pathname.startsWith("/product/");
       }
       return pathname === href;
     },
-    [pathname, filter]
+    [pathname]
   );
 }
 
@@ -48,7 +42,7 @@ function DesktopNavLinks() {
   const isActive = useIsActiveNav();
 
   return (
-    <nav className="hidden md:flex items-center gap-1.5">
+    <nav className="hidden md:flex items-center gap-2">
       {NAV_LINKS.map((l) => {
         const active = isActive(l.href);
         return (
@@ -64,6 +58,9 @@ function DesktopNavLinks() {
           </Link>
         );
       })}
+
+      {/* Download Price List Button */}
+
     </nav>
   );
 }
@@ -72,7 +69,7 @@ function MobileNavLinks({ onSelect }: { onSelect: () => void }) {
   const isActive = useIsActiveNav();
 
   return (
-    <div className="md:hidden border-t border-zinc-200 bg-white px-4 py-3 space-y-1">
+    <div className="md:hidden border-t border-zinc-200 bg-white px-4 py-3 space-y-1.5">
       {NAV_LINKS.map((l) => {
         const active = isActive(l.href);
         return (
@@ -89,6 +86,22 @@ function MobileNavLinks({ onSelect }: { onSelect: () => void }) {
           </Link>
         );
       })}
+
+      {/* Mobile Price List Download Button */}
+      <a
+        href="/ATM_Crackers_Price_List_2026.pdf"
+        download="ATM_Crackers_Price_List_2026.pdf"
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onSelect}
+        className="flex items-center justify-between px-3.5 py-2.5 text-sm font-bold text-white bg-crimson rounded-xl shadow-xs hover:bg-[#991B1B] transition-colors mt-2"
+      >
+        <span className="flex items-center gap-2">
+          <FaFilePdf className="text-base" />
+          Price List 2026 (PDF)
+        </span>
+        <FaDownload className="text-xs" />
+      </a>
     </div>
   );
 }
@@ -103,11 +116,32 @@ export function Header() {
   const { count: cartCount } = useCart();
   const { count: wishlistCount } = useWishlist();
 
-  const searchResults: Product[] = useMemo(() => {
-    if (searchQuery.length >= 2) {
-      return searchProducts(searchQuery).slice(0, 6);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      return;
     }
-    return [];
+
+    let active = true;
+    const timer = setTimeout(() => {
+      getProducts({ search: q })
+        .then((data) => {
+          if (active && data) {
+            setSearchResults(adaptApiProducts(data).slice(0, 6));
+          }
+        })
+        .catch(() => {
+          if (active) setSearchResults([]);
+        });
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [searchQuery]);
 
   useEffect(() => {
@@ -135,16 +169,15 @@ export function Header() {
           {/* Left: Mobile hamburger + Logo */}
           <div className="flex items-center gap-3">
             <button
-              className="md:hidden w-9 h-9 flex items-center justify-center text-zinc-700 hover:bg-zinc-100 rounded-lg"
+              className="md:hidden w-9 h-9 flex items-center justify-center text-zinc-700 hover:bg-zinc-100 rounded-lg cursor-pointer"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
-              <span className="text-xl">{mobileMenuOpen ? "✕" : "☰"}</span>
+              {mobileMenuOpen ? <IoClose className="text-xl" /> : <FaBars className="text-base" />}
             </button>
 
             {/* Brand Logo */}
             <Link href="/" className="flex items-center gap-2.5">
-              {/* Official Logo Image */}
               <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center p-0.5 border border-zinc-800 shadow-md">
                 <img
                   src="/images/logo.png"
@@ -163,35 +196,41 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Center: Desktop Nav */}
+          {/* Center: Desktop Nav with Price List Button */}
           <Suspense fallback={<nav className="hidden md:flex items-center gap-1 w-48" />}>
             <DesktopNavLinks />
           </Suspense>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+
             <div className="relative">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-zinc-600 hover:text-crimson hover:bg-zinc-50 rounded-xl transition-colors"
+                className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-zinc-600 hover:text-crimson hover:bg-zinc-50 rounded-xl transition-colors cursor-pointer"
                 aria-label="Search"
               >
-                <span className="text-base"><FaSearch /></span>
+                <FaSearch className="text-sm sm:text-base" />
               </button>
 
               {searchOpen && (
                 <div className="absolute right-0 top-12 w-75 sm:w-90 bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden z-50 animate-slide-down">
                   <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-100">
-                    <span className="text-zinc-400 text-md"><FaSearch /></span>
+                    <FaSearch className="text-zinc-400 text-sm" />
                     <input
                       ref={searchRef}
                       type="text"
-                      placeholder="Search 191+ fireworks..."
+                      placeholder="Search fireworks..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="flex-1 text-sm outline-none text-zinc-800 placeholder-zinc-400"
                     />
                     {searchQuery && (
-                      <button onClick={() => setSearchQuery("")} className="text-zinc-400 hover:text-zinc-600 text-xs">✕</button>
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="text-zinc-400 hover:text-zinc-600 text-sm cursor-pointer p-0.5"
+                      >
+                        <IoClose />
+                      </button>
                     )}
                   </div>
 
@@ -204,8 +243,8 @@ export function Header() {
                           onClick={() => setSearchOpen(false)}
                           className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 transition-colors"
                         >
-                          <div className="w-8 h-8 rounded-lg bg-linear-crimson flex items-center justify-center text-sm shrink-0">
-                            🎇
+                          <div className="w-8 h-8 rounded-lg bg-red-50 text-crimson flex items-center justify-center text-xs shrink-0">
+                            <FaFire />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-zinc-800 line-clamp-1">{p.name}</p>
@@ -225,7 +264,7 @@ export function Header() {
                           <button
                             key={s}
                             onClick={() => setSearchQuery(s)}
-                            className="px-2.5 py-1 text-xs bg-zinc-100 text-zinc-700 rounded-lg hover:bg-zinc-200 transition-colors"
+                            className="px-2.5 py-1 text-xs bg-zinc-100 text-zinc-700 rounded-lg hover:bg-zinc-200 transition-colors cursor-pointer"
                           >
                             {s}
                           </button>
@@ -243,21 +282,33 @@ export function Header() {
               className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-zinc-600 hover:text-pink-600 hover:bg-zinc-50 rounded-xl transition-colors"
               aria-label={`Wishlist (${wishlistCount} items)`}
             >
-              <span className="text-base">🤍</span>
+              <FaRegHeart className="text-base sm:text-lg" />
               {wishlistCount > 0 && (
-                <span className="absolute 0 top-1 right-1 w-4 h-4 bg-pink-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute top-1 right-1 w-4 h-4 bg-pink-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                   {wishlistCount > 9 ? "9+" : wishlistCount}
                 </span>
               )}
             </Link>
 
+            <a
+              href="/ATM_Crackers_Price_List_2026.pdf"
+              download="ATM_Crackers_Price_List_2026.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs lg:text-sm font-bold text-white bg-crimson hover:bg-[#991B1B] rounded-xl shadow-xs hover:shadow transition-all tracking-wide"
+              title="Download ATM Crackers Price List 2026 PDF"
+            >
+              <FaDownload className="text-xs" />
+              {(<span className="hidden md:flex ">Price List 2026</span>)}
+            </a>
+
             {/* Cart Button */}
             <Link
               href="/cart"
-              className="relative flex items-center gap-1.5 bg-linear-crimson text-white px-3 sm:px-4 py-2 rounded-xl hover:opacity-95 transition-all shadow-md"
+              className="relative flex items-center gap-2 bg-linear-crimson text-white px-3.5 sm:px-4 py-2 rounded-xl hover:opacity-95 transition-all shadow-md"
               aria-label={`Cart (${cartCount} items)`}
             >
-              <span className="text-sm">🛒</span>
+              <FaCartShopping className="text-sm" />
               <span className="text-xs sm:text-sm font-bold hidden sm:inline">Cart</span>
               {cartCount > 0 && (
                 <span className="w-4 h-4 sm:w-5 sm:h-5 bg-white text-crimson text-[10px] font-bold rounded-full flex items-center justify-center ml-0.5">

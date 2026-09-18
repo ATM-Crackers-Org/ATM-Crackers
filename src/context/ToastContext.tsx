@@ -55,13 +55,16 @@ export function useToast(): ToastContextValue {
   return ctx;
 }
 
+import { FaCartShopping, FaHeart, FaCircleCheck, FaCircleExclamation } from "react-icons/fa6";
+import { IoClose } from "react-icons/io5";
+
 // ─── Toast Container UI ───────────────────────────────────────
 
-const icons: Record<ToastType, string> = {
-  cart: "🛒",
-  wishlist: "❤️",
-  success: "✅",
-  error: "❌",
+const icons: Record<ToastType, React.ReactNode> = {
+  cart: <FaCartShopping className="text-crimson text-base" />,
+  wishlist: <FaHeart className="text-pink-500 text-base" />,
+  success: <FaCircleCheck className="text-emerald-500 text-base" />,
+  error: <FaCircleExclamation className="text-red-500 text-base" />,
 };
 
 const colors: Record<ToastType, string> = {
@@ -91,16 +94,16 @@ function ToastContainer({
           className={`flex items-center gap-3 bg-white rounded-xl shadow-xl border border-zinc-100 border-l-4 ${colors[t.type]} px-4 py-3 min-w-60 max-w-[320px] animate-slide-up`}
           role="alert"
         >
-          <span className="text-lg shrink-0">{icons[t.type]}</span>
+          <span className="shrink-0 flex items-center">{icons[t.type]}</span>
           <span className="text-sm font-medium text-zinc-800 flex-1">
             {t.message}
           </span>
           <button
             onClick={() => removeToast(t.id)}
-            className="text-zinc-400 hover:text-zinc-600 transition-colors shrink-0"
+            className="text-zinc-400 hover:text-zinc-600 transition-colors shrink-0 text-base flex items-center justify-center cursor-pointer"
             aria-label="Dismiss"
           >
-            ✕
+            <IoClose />
           </button>
         </div>
       ))}

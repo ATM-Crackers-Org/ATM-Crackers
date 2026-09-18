@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState, useMemo, Suspense } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { searchProducts, getHotDeals } from "@/lib/products";
+import { getProducts } from "@/services/product.service";
+import { adaptApiProducts } from "@/utils/product.adapter";
+import type { Product } from "@/lib/products";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { SearchableCategoryDropdown } from "@/components/ui/SearchableCategoryDropdown";
+import { FaSearch } from "react-icons/fa";
 
 function SearchPageInner() {
   const searchParams = useSearchParams();
@@ -15,6 +18,23 @@ function SearchPageInner() {
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recommended");
+  const [apiResults, setApiResults] = useState<Product[] | null>(null);
+  const [recommendations, setRecommendations] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    getProducts()
+      .then((prods) => {
+        if (mounted && prods) {
+          setRecommendations(adaptApiProducts(prods).slice(0, 8));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -22,10 +42,32 @@ function SearchPageInner() {
     setSelectedCategory("all");
   }
 
+  useEffect(() => {
+    let mounted = true;
+    if (!searchTerm) {
+      setApiResults(null);
+      return;
+    }
+
+    getProducts({ search: searchTerm })
+      .then((prods) => {
+        if (mounted && prods) {
+          setApiResults(adaptApiProducts(prods));
+        }
+      })
+      .catch((err) => {
+        console.warn("Live search API failed, falling back to local search:", err);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [searchTerm]);
+
   const results = useMemo(() => {
     if (!searchTerm) return [];
-    return searchProducts(searchTerm);
-  }, [searchTerm]);
+    return apiResults || [];
+  }, [searchTerm, apiResults]);
 
   const categoriesInResults = useMemo(() => {
     const map = new Map<string, { id: string; name: string; count: number }>();
@@ -60,7 +102,6 @@ function SearchPageInner() {
   }, [results, selectedCategory, sortBy]);
 
   const popularSuggestions = ["Sparklers", "Flower Pots", "Rockets", "Bombs", "Fancy Shots", "Chakkar", "Varnam"];
-  const recommendations = getHotDeals(8);
 
   return (
     <div className="max-w-360 mx-auto px-4 md:px-6 lg:px-8 py-8">
@@ -86,9 +127,10 @@ function SearchPageInner() {
           />
           <button
             type="submit"
-            className="px-6 py-3.5 bg-crimson text-white font-bold rounded-2xl shadow-md hover:bg-[#991B1B] transition-colors text-sm cursor-pointer"
+            className="px-6 py-3.5 bg-crimson text-white font-bold rounded-2xl shadow-md hover:bg-[#991B1B] transition-colors text-sm cursor-pointer flex items-center justify-center gap-2"
           >
-            🔍 Search
+            <FaSearch />
+            <span>Search</span>
           </button>
         </form>
 
@@ -170,7 +212,9 @@ function SearchPageInner() {
             <ProductGrid products={filteredResults} cols={4} />
           ) : (
             <div className="text-center py-16 bg-white rounded-3xl border border-zinc-100 p-8">
-              <span className="text-5xl block mb-3">🔍</span>
+              <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-zinc-400">
+                <FaSearch />
+              </div>
               <h3 className="text-lg font-bold text-zinc-800 mb-2">No matching fireworks found</h3>
               <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-8">
                 We couldn&apos;t find anything matching &quot;{searchTerm}&quot; in the selected filters. Try choosing &quot;All Categories&quot; or searching a broader term.

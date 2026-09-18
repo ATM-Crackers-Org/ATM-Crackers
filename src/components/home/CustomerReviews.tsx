@@ -1,12 +1,7 @@
+import React from "react";
+import { FaStar } from "react-icons/fa";
+
 const REVIEWS = [
-  {
-    name: "Priya Sharma",
-    location: "Chennai",
-    rating: 5,
-    review: "Amazing quality crackers! The fancy sky shots were spectacular. Packaging was very secure and delivery was quick. Will definitely order again!",
-    verified: true,
-    product: "Royal Premium Combo",
-  },
   {
     name: "Karthik Rajan",
     location: "Coimbatore",
@@ -36,7 +31,7 @@ const REVIEWS = [
 export function CustomerReviews() {
   return (
     <section className="py-14 sm:py-16 bg-white border-b border-zinc-100">
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-md mx-auto mb-10">
           <p className="text-xs font-bold text-crimson uppercase tracking-widest mb-1">
             ⭐ REAL EXPERIENCES
@@ -57,8 +52,10 @@ export function CustomerReviews() {
             >
               <div>
                 {/* Stars */}
-                <div className="flex items-center gap-0.5 text-amber text-xs mb-2.5">
-                  {"★".repeat(r.rating)}
+                <div className="flex items-center gap-1 text-amber text-xs mb-2.5">
+                  {Array.from({ length: r.rating }).map((_, idx) => (
+                    <FaStar key={idx} />
+                  ))}
                 </div>
 
                 <p className="text-xs text-zinc-700 leading-relaxed mb-3 line-clamp-4">

@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { FaDownload, FaIndustry } from "react-icons/fa";
+import { FaCartShopping, FaShieldHalved, FaTruckFast } from "react-icons/fa6";
+import { LuSparkles } from "react-icons/lu";
 
 export function HeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -119,15 +122,20 @@ export function HeroSection() {
                 href="/shop"
                 className="px-8 py-3.5 bg-linear-crimson text-white font-bold rounded-xl shadow-lg shadow-crimson/25 hover:shadow-crimson/40 hover:opacity-95 active:scale-98 transition-all text-sm flex items-center justify-center gap-2 group"
               >
-                <span>🛒 SHOP CRACKERS</span>
+                <FaCartShopping className="text-sm" />
+                <span>SHOP CRACKERS</span>
                 <span className="group-hover:translate-x-1 transition-transform">→</span>
               </Link>
-              <Link
-                href="/shop?filter=combos"
+              <a
+                href="/ATM_Crackers_Price_List_2026.pdf"
+                download="ATM_Crackers_Price_List_2026.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-8 py-3.5 border-2 border-gold/80 text-gold font-bold rounded-xl hover:bg-gold/10 active:scale-98 transition-all text-sm flex items-center justify-center gap-2 backdrop-blur-xs"
               >
-                <span>🎁 EXPLORE COMBOS</span>
-              </Link>
+                <FaDownload className="text-xs" />
+                <span>PRICE LIST 2026</span>
+              </a>
               <button
                 type="button"
                 onClick={toggleMute}
@@ -269,7 +277,7 @@ export function HeroSection() {
                   {/* Bottom Video Captions & Audio wave */}
                   <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-zinc-300 pointer-events-none z-10">
                     <span className="font-medium text-gold-light/90 flex items-center gap-1.5">
-                      <span className="text-amber">✨</span> Authentic Sivakasi Sparkle
+                      <LuSparkles className="text-amber text-xs" /> Authentic Sivakasi Sparkle
                     </span>
                     {!isMuted && isPlaying && (
                       <div className="flex items-end gap-0.5 h-3 text-gold">
@@ -285,15 +293,15 @@ export function HeroSection() {
                 {/* Sub-card Feature Pillars */}
                 <div className="mt-3 pt-2.5 border-t border-zinc-800/90 grid grid-cols-3 gap-2 text-center">
                   <div className="py-1">
-                    <span className="text-xs sm:text-sm block">🏭</span>
+                    <FaIndustry className="text-sm text-amber mx-auto block mb-1" />
                     <span className="text-[10px] sm:text-[11px] font-semibold text-zinc-300 block mt-0.5">Sivakasi Direct</span>
                   </div>
                   <div className="py-1 border-x border-zinc-800/80">
-                    <span className="text-xs sm:text-sm block">🛡️</span>
+                    <FaShieldHalved className="text-sm text-amber mx-auto block mb-1" />
                     <span className="text-[10px] sm:text-[11px] font-semibold text-zinc-300 block mt-0.5">100% Green Certified</span>
                   </div>
                   <div className="py-1">
-                    <span className="text-xs sm:text-sm block">🚚</span>
+                    <FaTruckFast className="text-sm text-amber mx-auto block mb-1" />
                     <span className="text-[10px] sm:text-[11px] font-semibold text-zinc-300 block mt-0.5">Pan-India Fast</span>
                   </div>
                 </div>

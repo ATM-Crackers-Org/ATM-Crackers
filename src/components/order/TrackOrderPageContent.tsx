@@ -3,6 +3,7 @@
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { FaTruckFast, FaCheck, FaWhatsapp } from "react-icons/fa6";
 
 function TrackOrderInner() {
   const searchParams = useSearchParams();
@@ -69,7 +70,9 @@ function TrackOrderInner() {
       </nav>
 
       <div className="text-center max-w-xl mx-auto mb-10">
-        <span className="text-4xl block mb-2">🚚</span>
+        <div className="w-16 h-16 bg-crimson/10 text-crimson rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">
+          <FaTruckFast />
+        </div>
         <h1 className="text-3xl font-display font-bold text-zinc-900 mb-2">
           Track Your Fireworks Order
         </h1>
@@ -132,7 +135,7 @@ function TrackOrderInner() {
                     : "bg-zinc-100 text-zinc-400 border border-zinc-200"
                     }`}
                 >
-                  {step.done ? (step.current ? "🚚" : "✓") : idx + 1}
+                  {step.done ? (step.current ? <FaTruckFast className="text-xs" /> : <FaCheck className="text-xs" />) : idx + 1}
                 </div>
 
                 <div className="flex-1">
@@ -158,12 +161,12 @@ function TrackOrderInner() {
               <p className="text-[11px] text-zinc-500">Contact driver or dispatch center if needed</p>
             </div>
             <a
-              href={`https://wa.me/919999999999?text=Hello%20ATM%20Crackers,%20need%20status%20for%20order%20${searchedId}`}
+              href={`https://wa.me/918056566845?text=Hello%20ATM%20Crackers,%20need%20status%20for%20order%20${searchedId}`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2.5 bg-[#25D366] text-white text-xs font-bold rounded-xl shadow-sm hover:bg-[#1ebd5a] transition-colors inline-flex items-center gap-1.5 whitespace-nowrap"
             >
-              💬 WhatsApp Support
+              <FaWhatsapp className="text-sm" /> WhatsApp Support
             </a>
           </div>
         </div>

@@ -1,13 +1,36 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getTopCategories } from "@/lib/categories";
+import { getCategories } from "@/services/category.service";
+import type { Category } from "@/types/category";
 import { CategoryImage } from "@/components/ui/ProductImage";
 
 export function CategoryGrid() {
-  const categories = getTopCategories(8);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    getCategories()
+      .then((data) => {
+        if (mounted && data) {
+          setCategories(data.slice(0, 8));
+        }
+      })
+      .catch((err) => console.warn("Failed to load categories:", err))
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <section className="py-14 sm:py-16 bg-warm-white">
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading */}
         <div className="text-center max-w-xl mx-auto mb-10">
           <p className="text-xs font-bold text-crimson uppercase tracking-widest mb-1.5">
@@ -21,39 +44,60 @@ export function CategoryGrid() {
           </p>
         </div>
 
-        {/* Compact Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {categories.map((cat) => (
-            <Link
-              key={cat.id}
-              href={`/categories/${cat.slug}`}
-              className="category-card group block bg-white rounded-2xl overflow-hidden border border-zinc-100 shadow-sm"
-            >
-              {/* Compact Image */}
-              <div className="overflow-hidden">
-                <CategoryImage
-                  categoryName={cat.name}
-                  className="transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
-
-              {/* Info */}
-              <div className="p-3">
-                <h3 className="text-xs sm:text-sm font-bold text-zinc-800 line-clamp-1 group-hover:text-crimson transition-colors">
-                  {cat.name}
-                </h3>
-                <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-zinc-50">
-                  <span className="text-[11px] text-zinc-400 font-medium">
-                    {cat.product_count} items
-                  </span>
-                  <span className="text-[11px] font-bold text-crimson group-hover:translate-x-0.5 transition-transform">
-                    Explore →
-                  </span>
+        {/* Loading skeleton */}
+        {loading && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 animate-pulse">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm h-48 sm:h-56"
+              >
+                <div className="h-32 sm:h-36 bg-zinc-200" />
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-zinc-200 rounded w-3/4" />
+                  <div className="h-3 bg-zinc-100 rounded w-1/2" />
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {/* Compact Grid */}
+        {!loading && categories.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            {categories.map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/categories/${cat.slug}`}
+                className="category-card group block bg-white rounded-2xl overflow-hidden border border-zinc-100 shadow-sm hover:shadow-md transition-shadow"
+              >
+                {/* Compact Image */}
+                <div className="overflow-hidden">
+                  <CategoryImage
+                    categoryName={cat.name}
+                    imageUrl={cat.imageUrl}
+                    className="transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+
+                {/* Info */}
+                <div className="p-3">
+                  <h3 className="text-xs sm:text-sm font-bold text-zinc-800 line-clamp-1 group-hover:text-crimson transition-colors">
+                    {cat.name}
+                  </h3>
+                  <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-zinc-50">
+                    <span className="text-[11px] text-zinc-400 font-medium">
+                      {cat.productCount ?? 0} items
+                    </span>
+                    <span className="text-[11px] font-bold text-crimson group-hover:translate-x-0.5 transition-transform">
+                      Explore →
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* View all button */}
         <div className="text-center mt-8">
@@ -61,7 +105,7 @@ export function CategoryGrid() {
             href="/categories"
             className="inline-flex items-center gap-2 px-6 py-2.5 border-2 border-crimson text-crimson text-xs sm:text-sm font-bold rounded-xl hover:bg-crimson hover:text-white transition-all"
           >
-            View All 37 Categories →
+            View All Categories →
           </Link>
         </div>
       </div>

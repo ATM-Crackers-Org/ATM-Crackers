@@ -30,7 +30,7 @@ export function FAQSection() {
 
   return (
     <section className="py-14 sm:py-16 bg-warm-white">
-      <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-200 mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <p className="text-xs font-bold text-crimson uppercase tracking-widest mb-1">
             HELP & SUPPORT
