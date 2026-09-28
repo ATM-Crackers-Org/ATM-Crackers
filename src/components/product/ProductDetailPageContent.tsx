@@ -40,7 +40,7 @@ export function ProductDetailPageContent({ slug }: ProductDetailPageContentProps
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [qty, setQty] = useState(1);
+  const [userSelectedQty, setUserSelectedQty] = useState<number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const { addToCart, updateQuantity, items } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
@@ -57,18 +57,11 @@ export function ProductDetailPageContent({ slug }: ProductDetailPageContentProps
     : null;
   const inCart = Boolean(cartItem);
   const cartQty = cartItem?.quantity ?? 0;
-
-  // When returning to product page, initialize quantity to what is already in the cart
-  useEffect(() => {
-    if (cartQty > 0) {
-      setQty(cartQty);
-    }
-  }, [cartQty]);
+  const qty = userSelectedQty ?? (cartQty > 0 ? cartQty : 1);
+  const setQty = (val: number) => setUserSelectedQty(val);
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
-    setError(null);
 
     async function loadProduct() {
       try {

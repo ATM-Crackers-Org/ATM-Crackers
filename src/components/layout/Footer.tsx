@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getCategories } from "@/services/category.service";
 import type { Category } from "@/types/category";
 import {
@@ -108,9 +109,12 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2.5 mb-3.5">
               <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-black flex items-center justify-center p-0.5 border border-zinc-800 shadow-md">
-                <img
+                <Image
                   src="/images/logo.png"
                   alt="ATM Crackers Sivakasi"
+                  width={40}
+                  height={40}
+                  style={{ width: "auto", height: "auto" }}
                   className="w-full h-full object-contain"
                 />
               </div>

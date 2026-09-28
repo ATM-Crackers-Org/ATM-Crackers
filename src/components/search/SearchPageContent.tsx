@@ -38,17 +38,20 @@ function SearchPageInner() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    setSearchTerm(query.trim());
+    const clean = query.trim();
+    setSearchTerm(clean);
     setSelectedCategory("all");
+    if (!clean) {
+      setApiResults(null);
+    }
   }
 
   useEffect(() => {
-    let mounted = true;
     if (!searchTerm) {
-      setApiResults(null);
       return;
     }
 
+    let mounted = true;
     getProducts({ search: searchTerm })
       .then((prods) => {
         if (mounted && prods) {

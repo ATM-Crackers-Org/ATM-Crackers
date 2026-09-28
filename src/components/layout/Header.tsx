@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -121,7 +122,6 @@ export function Header() {
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 2) {
-      setSearchResults([]);
       return;
     }
 
@@ -179,9 +179,13 @@ export function Header() {
             {/* Brand Logo */}
             <Link href="/" className="flex items-center gap-2.5">
               <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden bg-black flex items-center justify-center p-0.5 border border-zinc-800 shadow-md">
-                <img
+                <Image
                   src="/images/logo.png"
                   alt="ATM Crackers Sivakasi"
+                  width={48}
+                  height={48}
+                  priority
+                  style={{ width: "auto", height: "auto" }}
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -221,12 +225,19 @@ export function Header() {
                       type="text"
                       placeholder="Search fireworks..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSearchQuery(val);
+                        if (val.trim().length < 2) setSearchResults([]);
+                      }}
                       className="flex-1 text-sm outline-none text-zinc-800 placeholder-zinc-400"
                     />
                     {searchQuery && (
                       <button
-                        onClick={() => setSearchQuery("")}
+                        onClick={() => {
+                          setSearchQuery("");
+                          setSearchResults([]);
+                        }}
                         className="text-zinc-400 hover:text-zinc-600 text-sm cursor-pointer p-0.5"
                       >
                         <IoClose />

@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import type { Product } from "@/lib/products";
 import type { ApiCartItem, CartSummary } from "@/types/cart";
@@ -35,7 +36,7 @@ export interface CartContextValue {
   removeFromCart: (productIdOrSlug: string) => Promise<void>;
   updateQuantity: (productIdOrSlug: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
-  refreshCart: () => Promise<void>;
+  refreshCart: (showLoading?: boolean) => Promise<void>;
   isInCart: (productIdOrSlug: string) => boolean;
   getItemQuantity: (productIdOrSlug: string) => number;
 }
@@ -95,9 +96,31 @@ export function adaptApiCartItem(item: ApiCartItem): CartItem {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return [];
+  });
   const [summary, setSummary] = useState<CartSummary | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Keep a ref of items for callbacks to avoid re-triggering hooks on every state update
+  const itemsRef = useRef<CartItem[]>(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  // Debounce timers for quantity updates to eliminate rapid-fire API spam
+  const quantityDebounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Computed fallbacks in case summary is not yet loaded
   const total =
@@ -107,20 +130,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     summary?.totalItems ?? items.reduce((sum, i) => sum + i.quantity, 0);
 
   // Helper to find productId from either productId or slug
-  const resolveProductId = useCallback(
-    (identifier: string): string => {
-      const match = items.find(
-        (i) => i.product.id === identifier || i.product.slug === identifier
-      );
-      return match?.product.id || identifier;
-    },
-    [items]
-  );
+  const resolveProductId = useCallback((identifier: string): string => {
+    const match = itemsRef.current.find(
+      (i) => i.product.id === identifier || i.product.slug === identifier
+    );
+    return match?.product.id || identifier;
+  }, []);
 
   // ─── Fetch Cart from API ──────────────────────────────────────
-  const refreshCart = useCallback(async () => {
-    try {
+  const refreshCart = useCallback(async (showLoading = false) => {
+    if (showLoading) {
       setIsLoading(true);
+    }
+    try {
       const data = await getCart();
       if (data && Array.isArray(data.items)) {
         const adaptedItems = data.items.map(adaptApiCartItem);
@@ -147,14 +169,75 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         // ignore
       }
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
-  // Fetch from API on mount
+  // Background API sync on mount
   useEffect(() => {
-    refreshCart();
-  }, [refreshCart]);
+    let mounted = true;
+
+    getCart()
+      .then((data) => {
+        if (!mounted) return;
+        if (data && Array.isArray(data.items)) {
+          const adaptedItems = data.items.map(adaptApiCartItem);
+          setItems(adaptedItems);
+          setSummary(data.summary || null);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(adaptedItems));
+          } catch {
+            // ignore
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Cart initial API fetch warning:", err);
+      })
+      .finally(() => {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ─── Remove Item (DELETE /cart/items/{productId}) ─────────────
+  // Note: Declared BEFORE updateQuantity to prevent variable hoisting errors
+  const removeFromCart = useCallback(
+    async (productIdOrSlug: string): Promise<void> => {
+      const productId = resolveProductId(productIdOrSlug);
+
+      // Cancel any pending debounced updates for this product
+      const existingTimer = quantityDebounceTimers.current.get(productId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        quantityDebounceTimers.current.delete(productId);
+      }
+
+      // Optimistic remove
+      setItems((prev) =>
+        prev.filter(
+          (i) => i.product.id !== productId && i.product.slug !== productIdOrSlug
+        )
+      );
+
+      try {
+        await removeCartItem(productId);
+        await refreshCart(false);
+      } catch (err) {
+        console.error("Failed to delete cart item on API:", err);
+        await refreshCart(false);
+        throw err;
+      }
+    },
+    [resolveProductId, refreshCart]
+  );
 
   // ─── Add To Cart (POST /cart/items) ──────────────────────────
   const addToCart = useCallback(
@@ -174,11 +257,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         );
         if (idx >= 0) {
           const updated = [...prev];
+          const nextQty = updated[idx].quantity + quantity;
           updated[idx] = {
             ...updated[idx],
-            quantity: updated[idx].quantity + quantity,
-            itemTotal:
-              (updated[idx].quantity + quantity) * updated[idx].product.price,
+            quantity: nextQty,
+            itemTotal: nextQty * updated[idx].product.price,
           };
           return updated;
         }
@@ -192,14 +275,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ];
       });
 
-      // 2. API Call & Sync
+      // 2. API Call & Background Sync
       try {
         await addProductToCart({ productId, quantity });
-        await refreshCart();
+        await refreshCart(false);
       } catch (err) {
         console.error("Failed to add product to cart API:", err);
         // Rollback state on error
-        await refreshCart();
+        await refreshCart(false);
         throw err;
       }
     },
@@ -216,7 +299,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Optimistic update
+      // 1. Optimistic instant UI update
       setItems((prev) =>
         prev.map((i) =>
           i.product.id === productId || i.product.slug === productIdOrSlug
@@ -229,44 +312,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         )
       );
 
-      try {
-        await updateCartItemQuantity(productId, quantity);
-        await refreshCart();
-      } catch (err) {
-        console.error("Failed to update cart quantity on API:", err);
-        await refreshCart();
-        throw err;
-      }
+      // 2. Debounce backend PATCH call to prevent flooding API on quick clicks
+      return new Promise<void>((resolve, reject) => {
+        const existingTimer = quantityDebounceTimers.current.get(productId);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+        }
+
+        const newTimer = setTimeout(async () => {
+          quantityDebounceTimers.current.delete(productId);
+          try {
+            await updateCartItemQuantity(productId, quantity);
+            await refreshCart(false);
+            resolve();
+          } catch (err) {
+            console.error("Failed to update cart quantity on API:", err);
+            await refreshCart(false);
+            reject(err);
+          }
+        }, 250);
+
+        quantityDebounceTimers.current.set(productId, newTimer);
+      });
     },
-    [resolveProductId, refreshCart]
-  );
-
-  // ─── Remove Item (DELETE /cart/items/{productId}) ─────────────
-  const removeFromCart = useCallback(
-    async (productIdOrSlug: string): Promise<void> => {
-      const productId = resolveProductId(productIdOrSlug);
-
-      // Optimistic remove
-      setItems((prev) =>
-        prev.filter(
-          (i) => i.product.id !== productId && i.product.slug !== productIdOrSlug
-        )
-      );
-
-      try {
-        await removeCartItem(productId);
-        await refreshCart();
-      } catch (err) {
-        console.error("Failed to delete cart item on API:", err);
-        await refreshCart();
-        throw err;
-      }
-    },
-    [resolveProductId, refreshCart]
+    [resolveProductId, removeFromCart, refreshCart]
   );
 
   // ─── Clear Cart (DELETE /cart) ────────────────────────────────
   const clearCart = useCallback(async (): Promise<void> => {
+    // Clear all pending debounce timers
+    quantityDebounceTimers.current.forEach((t) => clearTimeout(t));
+    quantityDebounceTimers.current.clear();
+
     setItems([]);
     setSummary(null);
     try {
@@ -277,10 +354,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     try {
       await clearCartApi();
-      await refreshCart();
+      await refreshCart(false);
     } catch (err) {
       console.error("Failed to clear cart on API:", err);
-      await refreshCart();
+      await refreshCart(false);
       throw err;
     }
   }, [refreshCart]);

@@ -6,12 +6,9 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { TrustBar } from "@/components/home/TrustBar";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { HotDeals } from "@/components/home/HotDeals";
-import { ComboPacks } from "@/components/home/ComboPacks";
-import { BudgetSection } from "@/components/home/BudgetSection";
 import { BestSellers } from "@/components/home/BestSellers";
-import { BuildCombo } from "@/components/home/BuildCombo";
-import { WhyChooseUs } from "@/components/home/WhyChooseUs";
 import { PromoBanner } from "@/components/home/PromoBanner";
+import { WhyChooseUs } from "@/components/home/WhyChooseUs";
 import { CustomerReviews } from "@/components/home/CustomerReviews";
 import { FAQSection } from "@/components/home/FAQSection";
 
@@ -25,13 +22,10 @@ export default function HomePage() {
         <TrustBar />
         <CategoryGrid />
         <HotDeals />
-        {/* <ComboPacks /> */}
-        {/* <BudgetSection /> */}
-        {/* <BestSellers /> */}
+        <BestSellers />
         <PromoBanner />
-        {/* <BuildCombo /> */}
         <WhyChooseUs />
-        {/* <CustomerReviews /> */}
+        <CustomerReviews />
         <FAQSection />
       </main>
       <Footer />

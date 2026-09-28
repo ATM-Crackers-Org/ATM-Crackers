@@ -1,30 +1,8 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { WishlistProvider } from "@/context/WishlistContext";
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  display: "swap",
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  display: "swap",
-});
-
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -57,12 +35,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      data-scroll-behavior="smooth"
-      className={`${playfair.variable} ${inter.variable} ${plusJakarta.variable}`}
-    >
-      <body className="min-h-screen bg-warm-white font-(--font-inter) antialiased">
+    <html lang="en" data-scroll-behavior="smooth">
+      <body className="min-h-screen bg-warm-white antialiased font-sans">
         <ToastProvider>
           <CartProvider>
             <WishlistProvider>{children}</WishlistProvider>

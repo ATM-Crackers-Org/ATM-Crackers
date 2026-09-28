@@ -10,8 +10,6 @@ import type { Product as StaticProduct } from "@/lib/products";
 import { adaptApiProduct } from "@/utils/product.adapter";
 import { getCategoryStyle } from "@/lib/categories";
 import { ProductGrid } from "@/components/product/ProductGrid";
-import { formatPrice } from "@/lib/products";
-import { CategoryImage } from "@/components/ui/ProductImage";
 import { FaTriangleExclamation, FaArrowLeft } from "react-icons/fa6";
 
 interface CategoryDetailPageContentProps {
@@ -31,20 +29,30 @@ export function CategoryDetailPageContent({
   const [sortBy, setSortBy] = useState("recommended");
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    let mounted = true;
 
     Promise.all([
       getCategoryWithProducts(slug),
       getCategories(),
     ])
       .then(([{ category: cat, products }, cats]) => {
+        if (!mounted) return;
         setCategory(cat);
         setApiProducts(products);
         setAllCategories(cats);
+        setError(null);
       })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: Error) => {
+        if (!mounted) return;
+        setError(err.message);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, [slug]);
 
   const adaptedProducts: StaticProduct[] = useMemo(

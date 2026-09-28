@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import Image from "next/image";
 import { formatPrice } from "@/lib/products";
 import type { CartItem } from "@/context/CartContext";
 import type { DeliveryMethod } from "@/types/order";
@@ -556,9 +557,11 @@ Email: ATMCRACKERS@GMAIL.COM`;
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center p-1 border border-zinc-800 shrink-0">
-                    <img
+                    <Image
                       src="/images/logo.png"
                       alt="ATM Crackers"
+                      width={48}
+                      height={48}
                       className="w-full h-full object-contain"
                     />
                   </div>

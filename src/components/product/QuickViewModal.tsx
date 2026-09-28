@@ -20,7 +20,6 @@ interface QuickViewModalProps {
 }
 
 export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
-  const [qty, setQty] = useState(1);
   const { addToCart, updateQuantity, items } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const { showToast } = useToast();
@@ -33,12 +32,9 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
   const inCart = Boolean(cartItem);
   const cartQty = cartItem?.quantity ?? 0;
 
-  // Sync quantity if product is already in cart
-  useEffect(() => {
-    if (cartQty > 0) {
-      setQty(cartQty);
-    }
-  }, [cartQty]);
+  const [userSelectedQty, setUserSelectedQty] = useState<number | null>(null);
+  const qty = userSelectedQty ?? (cartQty > 0 ? cartQty : 1);
+  const setQty = (val: number) => setUserSelectedQty(val);
 
   // Close on ESC
   useEffect(() => {

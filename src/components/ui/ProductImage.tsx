@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 
 interface ProductImageProps {
   productName: string;
@@ -28,19 +29,23 @@ export function ProductImage({
       ? "h-16 w-16"
       : "h-36 sm:h-44";
 
-  const hasValidImage = Boolean(imageUrl && !imgError && !imageUrl.includes("placehold.co"));
+  const hasValidImage = Boolean(
+    imageUrl && !imgError && !imageUrl.includes("placehold.co")
+  );
 
   if (hasValidImage && imageUrl) {
     return (
       <div
         className={`relative w-full ${heightClass} rounded-inherit overflow-hidden flex items-center justify-center bg-zinc-50 ${className}`}
       >
-        <img
+        <Image
           src={imageUrl}
           alt={productName}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
           onError={() => setImgError(true)}
-          loading="lazy"
+          unoptimized
         />
       </div>
     );
@@ -51,11 +56,12 @@ export function ProductImage({
     <div
       className={`relative w-full ${heightClass} rounded-inherit overflow-hidden flex flex-col items-center justify-center bg-zinc-950 p-3 select-none ${className}`}
     >
-      <img
+      <Image
         src="/images/logo.png"
         alt={productName || "ATM Crackers"}
+        width={160}
+        height={160}
         className="max-w-full max-h-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
-        loading="lazy"
       />
     </div>
   );
@@ -78,12 +84,14 @@ export function CategoryImage({
       <div
         className={`relative w-full h-28 sm:h-32 overflow-hidden flex items-center justify-center bg-zinc-50 ${className}`}
       >
-        <img
+        <Image
           src={imageUrl}
           alt={categoryName}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          fill
+          sizes="(max-width: 768px) 50vw, 25vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
           onError={() => setImgError(true)}
-          loading="lazy"
+          unoptimized
         />
       </div>
     );
@@ -94,11 +102,12 @@ export function CategoryImage({
     <div
       className={`relative w-full h-28 sm:h-32 overflow-hidden flex items-center justify-center bg-zinc-950 p-2.5 ${className}`}
     >
-      <img
+      <Image
         src="/images/logo.png"
         alt={categoryName || "ATM Crackers"}
+        width={120}
+        height={120}
         className="max-w-full max-h-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
-        loading="lazy"
       />
     </div>
   );

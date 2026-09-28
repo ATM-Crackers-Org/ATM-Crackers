@@ -9,7 +9,7 @@ export interface UpdateCartItemDto {
 
 export interface AddCartItemResponse {
   message?: string;
-  data?: any;
+  data?: unknown;
   statusCode?: number;
 }
 

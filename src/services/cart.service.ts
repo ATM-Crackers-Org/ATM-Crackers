@@ -61,7 +61,7 @@ export async function addProductToCart(
 export async function updateCartItemQuantity(
   productId: string,
   quantity: number
-): Promise<any> {
+): Promise<unknown> {
   const cartKey = getCartKey();
   const cleanId = encodeURIComponent(productId.trim());
   const body: UpdateCartItemDto = { quantity };
@@ -79,7 +79,7 @@ export async function updateCartItemQuantity(
  *
  * @param productId string
  */
-export async function removeCartItem(productId: string): Promise<any> {
+export async function removeCartItem(productId: string): Promise<unknown> {
   const cartKey = getCartKey();
   const cleanId = encodeURIComponent(productId.trim());
   const { data } = await api.delete(`/cart/items/${cleanId}`, {
@@ -94,7 +94,7 @@ export async function removeCartItem(productId: string): Promise<any> {
  * DELETE /cart
  * Clears all items from the current cart on the backend.
  */
-export async function clearCartApi(): Promise<any> {
+export async function clearCartApi(): Promise<unknown> {
   const cartKey = getCartKey();
   const { data } = await api.delete("/cart", {
     headers: {
