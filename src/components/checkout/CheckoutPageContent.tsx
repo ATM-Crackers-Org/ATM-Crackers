@@ -476,6 +476,8 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                         type="text"
                         name="fullName"
                         required
+                        minLength={2}
+                        maxLength={80}
                         value={formData.fullName}
                         onChange={handleInputChange}
                         placeholder="e.g. Ramesh Kumar"
@@ -496,7 +498,9 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                           type="tel"
                           name="phone"
                           required
+                          minLength={10}
                           maxLength={10}
+                          pattern="[0-9]{10}"
                           value={formData.phone}
                           onChange={handleInputChange}
                           placeholder="e.g. 9876543210"
@@ -515,6 +519,7 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                       <input
                         type="email"
                         name="email"
+                        maxLength={100}
                         value={formData.email}
                         onChange={handleInputChange}
                         placeholder="e.g. ramesh@gmail.com"
@@ -531,6 +536,8 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                         rows={2}
                         name="streetAddress"
                         required
+                        minLength={5}
+                        maxLength={200}
                         value={formData.streetAddress}
                         onChange={handleInputChange}
                         placeholder="Door no, Building / Apartment name, Street name"
@@ -546,6 +553,8 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                         type="text"
                         name="city"
                         required
+                        minLength={2}
+                        maxLength={60}
                         value={formData.city}
                         onChange={handleInputChange}
                         placeholder="e.g. Madurai"
@@ -561,7 +570,10 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                         type="text"
                         name="pincode"
                         required
+                        minLength={6}
                         maxLength={6}
+                        pattern="[0-9]{6}"
+                        inputMode="numeric"
                         value={formData.pincode}
                         onChange={handleInputChange}
                         placeholder="e.g. 625001"
@@ -598,6 +610,7 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                       <input
                         type="text"
                         name="landmark"
+                        maxLength={100}
                         value={formData.landmark}
                         onChange={handleInputChange}
                         placeholder="e.g. Near Bus Stand / Temple"
