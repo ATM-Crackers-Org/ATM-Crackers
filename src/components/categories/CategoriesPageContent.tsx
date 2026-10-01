@@ -6,6 +6,7 @@ import { getCategories } from "@/services/category.service";
 import type { Category } from "@/types/category";
 import { CategoryImage } from "@/components/ui/ProductImage";
 
+import { CrackersLoader } from "@/components/ui/CrackersLoader";
 import { FaTriangleExclamation } from "react-icons/fa6";
 
 export function CategoriesPageContent() {
@@ -15,7 +16,10 @@ export function CategoriesPageContent() {
 
   useEffect(() => {
     getCategories()
-      .then(setCategories)
+      .then((cats) => {
+        const sorted = [...cats].sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+        setCategories(sorted);
+      })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -55,22 +59,14 @@ export function CategoriesPageContent() {
           </div>
         )}
 
-        {/* Loading skeleton */}
+        {/* Crackers-based loading */}
         {loading && !error && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-zinc-100 overflow-hidden animate-pulse"
-              >
-                <div className="h-28 sm:h-32 bg-zinc-100" />
-                <div className="p-4 space-y-2">
-                  <div className="h-3 bg-zinc-100 rounded w-3/4" />
-                  <div className="h-3 bg-zinc-100 rounded w-1/2" />
-                  <div className="h-3 bg-zinc-100 rounded w-1/3 mt-3" />
-                </div>
-              </div>
-            ))}
+          <div className="bg-white rounded-3xl border border-zinc-100 p-8 shadow-xs my-8">
+            <CrackersLoader
+              size="lg"
+              text="Lighting up Cracker Categories..."
+              subtext="Loading authentic festival categories from Sivakasi"
+            />
           </div>
         )}
 

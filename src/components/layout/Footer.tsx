@@ -169,8 +169,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <Link href="/track-order" className="text-zinc-400 hover:text-gold transition-colors">
-                  Track Consignment
+                <Link href="/orders" className="text-zinc-400 hover:text-gold transition-colors">
+                  My Orders
                 </Link>
               </li>
               <li>

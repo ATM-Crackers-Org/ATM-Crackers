@@ -4,6 +4,7 @@ import React, { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useFlyRocket } from "@/context/FlyRocketContext";
 import { FaHouse, FaFire, FaLayerGroup, FaFilePdf, FaCartShopping } from "react-icons/fa6";
 
 const NAV = [
@@ -17,6 +18,13 @@ const NAV = [
 function MobileNavContent() {
   const pathname = usePathname();
   const { count } = useCart();
+  const { isCartBouncing } = useFlyRocket();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const displayCount = mounted ? count : 0;
 
   function isItemActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -52,19 +60,31 @@ function MobileNavContent() {
           );
         }
 
+        const isCart = item.label === "Cart";
         return (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center justify-center gap-0.5 transition-colors relative ${
+            id={isCart ? "mobile-cart-btn" : undefined}
+            className={`flex flex-col items-center justify-center gap-0.5 transition-all duration-300 relative ${
+              isCart && isCartBouncing ? "scale-115" : ""
+            } ${
               active ? "text-crimson font-bold" : "text-zinc-500 hover:text-zinc-800"
             }`}
           >
-            <span className="text-lg relative">
+            <span
+              className={`text-lg relative transition-transform duration-300 ${
+                isCart && isCartBouncing ? "scale-125 text-amber-500" : ""
+              }`}
+            >
               <IconComponent />
-              {item.label === "Cart" && count > 0 && (
-                <span className="absolute -top-1 -right-2 w-4 h-4 bg-crimson text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                  {count > 9 ? "9+" : count}
+              {isCart && (displayCount > 0 || isCartBouncing) && (
+                <span
+                  className={`absolute -top-1 -right-2 w-4 h-4 bg-crimson text-white text-[9px] font-bold rounded-full flex items-center justify-center transition-transform duration-300 ${
+                    isCartBouncing ? "scale-130 bg-amber-500 ring-2 ring-amber-300" : ""
+                  }`}
+                >
+                  {displayCount === 0 && isCartBouncing ? 1 : displayCount > 9 ? "9+" : displayCount}
                 </span>
               )}
             </span>

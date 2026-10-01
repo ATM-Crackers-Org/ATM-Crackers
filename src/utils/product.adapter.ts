@@ -22,7 +22,8 @@ export function adaptApiProduct(p: ApiProduct): UiProduct {
   const hash = hashString(p.id || p.slug);
   const rating = Number((4.1 + (hash % 9) * 0.1).toFixed(1));
   const reviewsCount = 12 + (hash % 140);
-  const order = p.displayOrder ?? 99;
+  const order = p.displayOrder ?? 999;
+  const categoryOrder = p.category?.displayOrder ?? 999;
 
   return {
     id: p.id || (p as unknown as { _id?: string })._id || "",
@@ -36,6 +37,8 @@ export function adaptApiProduct(p: ApiProduct): UiProduct {
     category_name: p.category?.name || "Fireworks",
     category_slug: p.category?.slug || "fireworks",
     category_id: p.categoryId || p.category?.id || "",
+    display_order: order,
+    category_display_order: categoryOrder,
 
     sku: p.id ? `ATM-${p.id.slice(-4).toUpperCase()}` : "ATM-001",
     stock_quantity: p.stockStatus === "in_stock" ? 100 : 0,

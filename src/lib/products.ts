@@ -13,6 +13,8 @@ export interface RawProduct {
   is_featured: boolean;
   weight: number | null;
   unit: string;
+  display_order?: number;
+  category_display_order?: number;
 }
 
 export interface Product extends RawProduct {

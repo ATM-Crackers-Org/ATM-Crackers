@@ -8,6 +8,8 @@ import { adaptApiProducts } from "@/utils/product.adapter";
 import type { Product } from "@/lib/products";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { SearchableCategoryDropdown } from "@/components/ui/SearchableCategoryDropdown";
+import { CrackersLoader } from "@/components/ui/CrackersLoader";
+import { usePopularSearches } from "@/hooks/usePopularSearches";
 import { FaSearch } from "react-icons/fa";
 
 function SearchPageInner() {
@@ -16,17 +18,24 @@ function SearchPageInner() {
 
   const [query, setQuery] = useState(initialQuery);
   const [searchTerm, setSearchTerm] = useState(initialQuery);
+  const [searchError, setSearchError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recommended");
   const [apiResults, setApiResults] = useState<Product[] | null>(null);
+  const [allCatalogProducts, setAllCatalogProducts] = useState<Product[]>([]);
   const [recommendations, setRecommendations] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const { categories: popularCategories, products: popularProducts } = usePopularSearches();
 
   useEffect(() => {
     let mounted = true;
     getProducts()
       .then((prods) => {
         if (mounted && prods) {
-          setRecommendations(adaptApiProducts(prods).slice(0, 8));
+          const adapted = adaptApiProducts(prods);
+          setAllCatalogProducts(adapted);
+          setRecommendations(adapted.slice(0, 8));
         }
       })
       .catch(() => {});
@@ -39,6 +48,11 @@ function SearchPageInner() {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const clean = query.trim();
+    if (clean.length > 0 && clean.length < 3) {
+      setSearchError("Please enter at least 3 characters to search fireworks.");
+      return;
+    }
+    setSearchError("");
     setSearchTerm(clean);
     setSelectedCategory("all");
     if (!clean) {
@@ -47,12 +61,15 @@ function SearchPageInner() {
   }
 
   useEffect(() => {
-    if (!searchTerm) {
+    // Only activate API search call if minimum 3 characters are typed
+    if (!searchTerm || searchTerm.trim().length < 3) {
+      setApiResults(null);
       return;
     }
 
     let mounted = true;
-    getProducts({ search: searchTerm })
+    setSearching(true);
+    getProducts({ search: searchTerm.trim() })
       .then((prods) => {
         if (mounted && prods) {
           setApiResults(adaptApiProducts(prods));
@@ -60,6 +77,9 @@ function SearchPageInner() {
       })
       .catch((err) => {
         console.warn("Live search API failed, falling back to local search:", err);
+      })
+      .finally(() => {
+        if (mounted) setSearching(false);
       });
 
     return () => {
@@ -69,8 +89,19 @@ function SearchPageInner() {
 
   const results = useMemo(() => {
     if (!searchTerm) return [];
-    return apiResults || [];
-  }, [searchTerm, apiResults]);
+    if (apiResults && apiResults.length > 0) return apiResults;
+    // Smart local fallback if backend API search only indexes product names
+    const q = searchTerm.trim().toLowerCase();
+    if (allCatalogProducts.length > 0) {
+      return allCatalogProducts.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.category_name?.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q)
+      );
+    }
+    return [];
+  }, [searchTerm, apiResults, allCatalogProducts]);
 
   const categoriesInResults = useMemo(() => {
     const map = new Map<string, { id: string; name: string; count: number }>();
@@ -104,8 +135,6 @@ function SearchPageInner() {
     return list;
   }, [results, selectedCategory, sortBy]);
 
-  const popularSuggestions = ["Sparklers", "Flower Pots", "Rockets", "Bombs", "Fancy Shots", "Chakkar", "Varnam"];
-
   return (
     <div className="max-w-360 mx-auto px-4 md:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
@@ -137,28 +166,64 @@ function SearchPageInner() {
           </button>
         </form>
 
-        {/* Popular Tags */}
-        <div className="flex items-center justify-center flex-wrap gap-2 text-xs text-zinc-500">
-          <span className="font-semibold text-zinc-600">Popular:</span>
-          {popularSuggestions.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => {
-                setQuery(tag);
-                setSearchTerm(tag);
-                setSelectedCategory("all");
-              }}
-              className="px-3 py-1.5 bg-zinc-100 text-zinc-700 rounded-full hover:bg-zinc-200 transition-colors"
-            >
-              {tag}
-            </button>
-          ))}
+        {/* Minimum character validation error */}
+        {searchError && (
+          <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+            <span>✨ {searchError}</span>
+          </div>
+        )}
+
+        {/* Dynamic Category & Product Popular Tags */}
+        <div className="space-y-2 mt-3">
+          {popularCategories.length > 0 && (
+            <div className="flex items-center justify-center flex-wrap gap-1.5 text-xs text-zinc-500">
+              <span className="font-bold text-zinc-600 shrink-0">Popular Categories:</span>
+              {popularCategories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setQuery(c.name);
+                    setSearchTerm(c.name);
+                    setSelectedCategory("all");
+                  }}
+                  className="px-3 py-1 bg-red-50 text-red-700 font-semibold rounded-full hover:bg-crimson hover:text-white transition-colors cursor-pointer border border-red-200 shadow-2xs"
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {popularProducts.length > 0 && (
+            <div className="flex items-center justify-center flex-wrap gap-1.5 text-xs text-zinc-500">
+              <span className="font-bold text-zinc-600 shrink-0">Popular Crackers:</span>
+              {popularProducts.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setQuery(p.name);
+                    setSearchTerm(p.name);
+                    setSelectedCategory("all");
+                  }}
+                  className="px-3 py-1 bg-zinc-100 text-zinc-700 font-medium rounded-full hover:bg-zinc-800 hover:text-white transition-colors cursor-pointer border border-zinc-200"
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Results Section */}
-      {searchTerm ? (
+      {searching ? (
+        <CrackersLoader
+          text={`Searching for "${searchTerm}"...`}
+          subtext="Finding sparkling fireworks matching your search"
+        />
+      ) : searchTerm ? (
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-zinc-200">
             <div>
@@ -244,7 +309,15 @@ function SearchPageInner() {
 export function SearchPageContent() {
   return (
     <main className="min-h-screen bg-warm-white">
-      <Suspense fallback={<div className="text-center py-20 text-zinc-500">Loading search...</div>}>
+      <Suspense
+        fallback={
+          <CrackersLoader
+            fullHeight
+            text="Loading Search..."
+            subtext="Preparing Sivakasi fireworks directory"
+          />
+        }
+      >
         <SearchPageInner />
       </Suspense>
     </main>

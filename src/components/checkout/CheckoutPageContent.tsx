@@ -6,14 +6,13 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { formatPrice } from "@/lib/products";
 import { ProductImage } from "@/components/ui/ProductImage";
-import { createOrder } from "@/services/order.service";
-import type { DeliveryMethod } from "@/types/order";
+import { createOrder, previewCheckout } from "@/services/order.service";
+import type { DeliveryMethod, CheckoutPreviewData } from "@/types/order";
 import { InvoiceModal, printInvoiceDocument } from "@/components/checkout/InvoiceModal";
 import type { CartItem } from "@/context/CartContext";
 import {
   FaCartShopping,
   FaCheck,
-  FaLocationDot,
   FaWhatsapp,
   FaTruckFast,
   FaSpinner,
@@ -21,6 +20,7 @@ import {
   FaBoxOpen,
   FaFilePdf,
   FaPrint,
+  FaHouse,
 } from "react-icons/fa6";
 
 export function CheckoutPageContent() {
@@ -44,15 +44,18 @@ export function CheckoutPageContent() {
 
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
-    discountPercent: number;
+    discountAmount: number;
   } | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState("");
+  const [previewTotals, setPreviewTotals] = useState<CheckoutPreviewData | null>(null);
 
   // Submission & Result State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [confirmedOrderId, setConfirmedOrderId] = useState("");
   const [confirmedSubtotal, setConfirmedSubtotal] = useState(0);
+  const [confirmedDiscount, setConfirmedDiscount] = useState(0);
   const [confirmedGrandTotal, setConfirmedGrandTotal] = useState(0);
   const [confirmedItems, setConfirmedItems] = useState<CartItem[]>([]);
   const [confirmedOrderDate, setConfirmedOrderDate] = useState("");
@@ -61,11 +64,11 @@ export function CheckoutPageContent() {
   // Delivery is handled via Sivakasi Lorry Transport (To-Pay at parcel godown by customer)
   // No delivery charges are collected on the website.
 
-  const couponDiscount = appliedCoupon
-    ? Math.round((total * appliedCoupon.discountPercent) / 100)
-    : 0;
+  const couponDiscount = appliedCoupon ? appliedCoupon.discountAmount : 0;
 
-  const grandTotal = Math.max(0, total - couponDiscount);
+  const grandTotal = previewTotals
+    ? previewTotals.grandTotal
+    : Math.max(0, total - couponDiscount);
 
   function handleInputChange(
     e: React.ChangeEvent<
@@ -75,21 +78,77 @@ export function CheckoutPageContent() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   }
 
-  function handleApplyCoupon() {
+  async function handleApplyCoupon() {
     setCouponError("");
     const code = formData.promoCode.trim().toUpperCase();
-    if (!code) return;
-
-    if (code === "FESTIVAL10" || code === "ATM10" || code === "ATMCRACKERS") {
-      setAppliedCoupon({ code, discountPercent: 10 });
-      showToast(`Coupon '${code}' applied! 10% Discount`, "success");
-    } else if (code === "DIWALI2025" || code === "FESTIVE15") {
-      setAppliedCoupon({ code, discountPercent: 15 });
-      showToast(`Coupon '${code}' applied! 15% Discount`, "success");
-    } else {
-      setCouponError("Invalid promo code. Try 'FESTIVAL10' or 'DIWALI2025'");
-      showToast("Invalid promo code", "error");
+    if (!code) {
+      setCouponError("Please enter a coupon code");
+      return;
     }
+
+    setIsApplyingCoupon(true);
+
+    try {
+      const cleanPhone = formData.phone.trim().replace(/\D/g, "");
+      const cleanPin = formData.pincode.trim().replace(/\D/g, "");
+
+      const previewPayload = {
+        customer: {
+          name: formData.fullName.trim() || "Customer",
+          mobile: cleanPhone.length >= 10 ? cleanPhone : "9999999999",
+          email: formData.email.trim() || undefined,
+        },
+        shippingAddress: {
+          fullName: formData.fullName.trim() || "Customer",
+          streetAddress: formData.streetAddress.trim() || "Delivery Address",
+          city: formData.city.trim() || "City",
+          state: formData.state.trim() || "Tamil Nadu",
+          pincode: cleanPin.length === 6 ? cleanPin : "600001",
+          landmark: formData.landmark.trim() || undefined,
+        },
+        deliveryMethod: formData.deliveryOption,
+        paymentMethod: "MANUAL" as const,
+        couponCode: code,
+        promoCode: code,
+      };
+
+      const response = await previewCheckout(previewPayload);
+      const data: CheckoutPreviewData = response.data;
+      const discount = data.couponDiscount ?? data.totalDiscount ?? 0;
+
+      setAppliedCoupon({
+        code: data.couponCode || code,
+        discountAmount: discount,
+      });
+
+      setPreviewTotals(data);
+
+      showToast(
+        `Coupon '${data.couponCode || code}' applied! Saved ${formatPrice(discount)}`,
+        "success"
+      );
+    } catch (err: unknown) {
+      const apiErr = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const errorMsg =
+        apiErr?.response?.data?.message ||
+        apiErr?.message ||
+        "Invalid or inactive coupon code.";
+      setCouponError(errorMsg);
+      showToast(errorMsg, "error");
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setPreviewTotals(null);
+    setCouponError("");
+    setFormData((prev) => ({ ...prev, promoCode: "" }));
+    showToast("Coupon removed", "success");
   }
 
   async function handleSubmitOrder(e: React.FormEvent) {
@@ -142,7 +201,8 @@ export function CheckoutPageContent() {
         },
         deliveryMethod: formData.deliveryOption,
         paymentMethod: "MANUAL" as const,
-        promoCode: appliedCoupon ? appliedCoupon.code : formData.promoCode.trim() || undefined,
+        couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+        promoCode: appliedCoupon ? appliedCoupon.code : undefined,
       };
 
       const response = await createOrder(orderPayload);
@@ -163,17 +223,20 @@ export function CheckoutPageContent() {
       });
 
       const itemsSnapshot = [...items];
-      const snapshotSubtotal = itemsSnapshot.reduce(
-        (sum, i) => sum + i.product.price * i.quantity,
-        0
-      );
-      const snapshotDiscount = appliedCoupon
-        ? Math.round((snapshotSubtotal * appliedCoupon.discountPercent) / 100)
-        : 0;
-      const snapshotGrandTotal = Math.max(0, snapshotSubtotal - snapshotDiscount);
+      const snapshotSubtotal =
+        previewTotals?.subtotal ??
+        itemsSnapshot.reduce(
+          (sum, i) => sum + i.product.price * i.quantity,
+          0
+        );
+      const snapshotDiscount = couponDiscount;
+      const snapshotGrandTotal =
+        previewTotals?.grandTotal ??
+        Math.max(0, snapshotSubtotal - snapshotDiscount);
 
       setConfirmedItems(itemsSnapshot);
       setConfirmedSubtotal(snapshotSubtotal);
+      setConfirmedDiscount(snapshotDiscount);
       setConfirmedGrandTotal(snapshotGrandTotal);
       setConfirmedOrderDate(orderDateStr);
       setConfirmedOrderId(orderId);
@@ -181,7 +244,6 @@ export function CheckoutPageContent() {
       await clearCart();
       showToast("Order placed successfully!", "success");
     } catch (err: unknown) {
-      console.error("Order creation failed:", err);
       const apiErr = err as { response?: { data?: { message?: string } }; message?: string };
       const errorMsg =
         apiErr?.response?.data?.message ||
@@ -304,44 +366,24 @@ export function CheckoutPageContent() {
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center">
               <a
                 href={`https://wa.me/918056566845?text=${encodeURIComponent(
-                  `Hi ATM Crackers,
-I have booked order #${confirmedOrderId} for ₹${(
-                    confirmedGrandTotal || grandTotal
-                  ).toLocaleString("en-IN")}.
-Please share UPI / GPay payment details so I can pay and confirm dispatch.
+                  `Hello ATM Crackers,
+I have booked order *#${confirmedOrderId}*.
 
-🧾 *ORDER DETAILS*
-----------------------------------
-*Order ID:* ${confirmedOrderId}
-*Date:* ${confirmedOrderDate}
-*Customer:* ${formData.fullName} (+91 ${formData.phone})
-*Address:* ${formData.streetAddress}, ${formData.city} - ${formData.pincode}
+📦 *Order Details:*
+• *Order No:* ${confirmedOrderId}
+• *Customer:* ${formData.fullName} (+91 ${formData.phone})
+• *Delivery Town:* ${formData.city} (${formData.pincode})
+• *Items Count:* ${confirmedItems.length} products (${confirmedItems.reduce((acc, i) => acc + i.quantity, 0)} boxes)
 
-📦 *ITEMS ORDERED:*
-${confirmedItems
-  .map(
-    (item, idx) =>
-      `${idx + 1}. ${item.product.name} (Qty: ${item.quantity}) - ₹${(
-        item.product.price * item.quantity
-      ).toLocaleString("en-IN")}`
-  )
-  .join("\n")}
-----------------------------------
-*Subtotal:* ₹${(confirmedSubtotal || total).toLocaleString("en-IN")}
-${
-  appliedCoupon
-    ? `*Promo Discount:* -₹${Math.round(
-        ((confirmedSubtotal || total) * appliedCoupon.discountPercent) / 100
-      ).toLocaleString("en-IN")}\n`
-    : ""
-}*Transport:* Standard Lorry Transport (Freight To-Pay at Godown)
-💰 *Total Payable:* ₹${(confirmedGrandTotal || grandTotal).toLocaleString("en-IN")}
-💳 *Payment:* Pay via WhatsApp (UPI/GPay)
+💰 *Payment Summary:*
+• *Subtotal:* ₹${(confirmedSubtotal || total).toLocaleString("en-IN")}${
+                    appliedCoupon
+                      ? `\n• *Discount (${appliedCoupon.code}):* -₹${confirmedDiscount.toLocaleString("en-IN")}`
+                      : ""
+                  }
+• *Total Payable:* ₹${(confirmedGrandTotal || grandTotal).toLocaleString("en-IN")}
 
-*ATM CRACKERS*
-12/476/4 RATHINAPURI NAGAR, MEENAMPATTI Anuppankulam
-GSTIN: 33ACHFA6073E1ZN
-Email: ATMCRACKERS@GMAIL.COM`
+Please share UPI / GPay payment details to confirm and dispatch my order. Thank you!`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -376,9 +418,7 @@ Email: ATMCRACKERS@GMAIL.COM`
                     },
                     items: confirmedItems.length > 0 ? confirmedItems : items,
                     subtotal: confirmedSubtotal || total,
-                    discount: appliedCoupon
-                      ? Math.round(((confirmedSubtotal || total) * appliedCoupon.discountPercent) / 100)
-                      : 0,
+                    discount: confirmedDiscount,
                     grandTotal: confirmedGrandTotal || grandTotal,
                     deliveryMethod: "STANDARD",
                     paymentMethod: "MANUAL",
@@ -391,10 +431,17 @@ Email: ATMCRACKERS@GMAIL.COM`
               </button>
 
               <Link
-                href={`/track-order?orderId=${confirmedOrderId}`}
+                href="/orders"
                 className="px-5 py-3.5 border border-zinc-200 bg-white text-zinc-700 font-bold rounded-xl shadow-xs hover:bg-zinc-50 transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
               >
-                <FaLocationDot /> Track Order
+                <FaReceipt /> My Orders
+              </Link>
+
+              <Link
+                href="/"
+                className="px-5 py-3.5 border border-zinc-200 bg-white text-zinc-700 font-bold rounded-xl shadow-xs hover:bg-zinc-50 transition-colors text-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <FaHouse /> Go to Home
               </Link>
             </div>
           </div>
@@ -634,25 +681,6 @@ Email: ATMCRACKERS@GMAIL.COM`
                   </div>
                 </div>
 
-                {/* Mobile / Tablet View Place Order Button */}
-                <div className="lg:hidden">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-4 bg-crimson text-white font-bold rounded-2xl hover:bg-[#991B1B] shadow-lg transition-all text-base flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <FaSpinner className="animate-spin text-lg" /> Booking
-                        Order...
-                      </>
-                    ) : (
-                      <>
-                        <FaCheck /> Book Order &amp; Pay on WhatsApp ({formatPrice(grandTotal)})
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
 
               {/* Right Column: Order Summary (Sticky) */}
@@ -696,10 +724,10 @@ Email: ATMCRACKERS@GMAIL.COM`
                     ))}
                   </div>
 
-                  {/* Promo Code Input */}
+                  {/* Promo / Coupon Code Input */}
                   <div className="mb-5 pt-4 border-t border-zinc-100">
                     <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                      Have a Festival Promo Code?
+                      Have a Coupon / Promo Code?
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -707,22 +735,36 @@ Email: ATMCRACKERS@GMAIL.COM`
                         name="promoCode"
                         value={formData.promoCode}
                         onChange={handleInputChange}
-                        placeholder="e.g. FESTIVAL10"
-                        className="flex-1 px-3 py-2 border border-zinc-200 rounded-xl text-xs uppercase outline-none focus:border-crimson transition-colors"
+                        disabled={isApplyingCoupon || Boolean(appliedCoupon)}
+                        placeholder="e.g. DIWALI500"
+                        className="flex-1 px-3 py-2 border border-zinc-200 rounded-xl text-xs uppercase outline-none focus:border-crimson transition-colors disabled:bg-zinc-100 disabled:text-zinc-500"
                       />
-                      <button
-                        type="button"
-                        onClick={handleApplyCoupon}
-                        className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors cursor-pointer"
-                      >
-                        Apply
-                      </button>
+                      {appliedCoupon ? (
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={isApplyingCoupon || !formData.promoCode.trim()}
+                          className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 disabled:opacity-50 transition-colors cursor-pointer flex items-center gap-1.5"
+                        >
+                          {isApplyingCoupon && (
+                            <FaSpinner className="animate-spin text-xs" />
+                          )}
+                          Apply
+                        </button>
+                      )}
                     </div>
                     {appliedCoupon && (
                       <p className="text-[11px] text-emerald-600 font-semibold mt-1.5 flex items-center gap-1">
-                        <FaCheck className="text-[10px]" /> Promo &apos;
-                        {appliedCoupon.code}&apos; applied (-
-                        {appliedCoupon.discountPercent}%)
+                        <FaCheck className="text-[10px]" /> Coupon &apos;
+                        {appliedCoupon.code}&apos; applied (−{formatPrice(appliedCoupon.discountAmount)})
                       </p>
                     )}
                     {couponError && (
@@ -743,7 +785,7 @@ Email: ATMCRACKERS@GMAIL.COM`
 
                     {appliedCoupon && (
                       <div className="flex justify-between text-emerald-600">
-                        <span>Promo Discount ({appliedCoupon.code}):</span>
+                        <span>Coupon Discount ({appliedCoupon.code}):</span>
                         <span className="font-semibold">
                           −{formatPrice(couponDiscount)}
                         </span>
@@ -765,8 +807,8 @@ Email: ATMCRACKERS@GMAIL.COM`
                     </div>
                   </div>
 
-                  {/* Desktop Submit Button */}
-                  <div className="mt-6 hidden lg:block">
+                  {/* Submit Button */}
+                  <div className="mt-6">
                     <button
                       type="submit"
                       disabled={isSubmitting}
@@ -829,12 +871,7 @@ Email: ATMCRACKERS@GMAIL.COM`
             },
             items: confirmedItems.length > 0 ? confirmedItems : items,
             subtotal: confirmedSubtotal || total,
-            discount: appliedCoupon
-              ? Math.round(
-                  ((confirmedSubtotal || total) * appliedCoupon.discountPercent) /
-                    100
-                )
-              : 0,
+            discount: confirmedDiscount,
             grandTotal: confirmedGrandTotal || grandTotal,
             deliveryMethod: formData.deliveryOption,
             paymentMethod: "MANUAL",

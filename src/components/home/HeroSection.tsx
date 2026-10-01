@@ -167,15 +167,15 @@ export function HeroSection() {
             {/* Stats Strip */}
             <div className="grid grid-cols-3 max-w-lg mx-auto lg:mx-0 pt-6 border-t border-zinc-800/80 gap-4">
               <div className="text-center lg:text-left">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-gold">191+</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-gold">200+</p>
                 <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wider mt-0.5">Products</p>
               </div>
               <div className="text-center lg:text-left border-x border-zinc-800 px-3">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-gold">80%</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-gold">90%</p>
                 <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wider mt-0.5">Off Wholesale</p>
               </div>
               <div className="text-center lg:text-left">
-                <p className="text-2xl sm:text-3xl font-display font-bold text-gold">10k+</p>
+                <p className="text-2xl sm:text-3xl font-display font-bold text-gold">7k+</p>
                 <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wider mt-0.5">Happy Families</p>
               </div>
             </div>

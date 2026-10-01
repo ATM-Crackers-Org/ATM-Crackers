@@ -63,24 +63,27 @@ body {
    Utility Color Classes (Reliable cross-page styling)
    ============================================================ */
 
-.bg-crimson { background-color: var(--color-crimson) !important; }
-.bg-crimson-dark { background-color: var(--color-crimson-dark) !important; }
-.bg-crimson-light { background-color: var(--color-crimson-light) !important; }
-.bg-gold { background-color: var(--color-gold) !important; }
-.bg-amber { background-color: var(--color-amber) !important; }
-.bg-midnight { background-color: var(--color-midnight) !important; }
-.bg-surface { background-color: var(--color-surface) !important; }
-.bg-surface-2 { background-color: var(--color-surface-2) !important; }
-.bg-warm-white { background-color: var(--color-warm-white) !important; }
+.bg-crimson { background-color: var(--color-crimson); }
+.bg-crimson-dark { background-color: var(--color-crimson-dark); }
+.bg-crimson-light { background-color: var(--color-crimson-light); }
+.bg-gold { background-color: var(--color-gold); }
+.bg-amber { background-color: var(--color-amber); }
+.bg-midnight { background-color: var(--color-midnight); }
+.bg-surface { background-color: var(--color-surface); }
+.bg-surface-2 { background-color: var(--color-surface-2); }
+.bg-warm-white { background-color: var(--color-warm-white); }
 
-.text-crimson { color: var(--color-crimson) !important; }
-.text-crimson-dark { color: var(--color-crimson-dark) !important; }
-.text-gold { color: var(--color-gold) !important; }
-.text-amber { color: var(--color-amber) !important; }
-.text-ondark { color: var(--color-text-ondark) !important; }
+.text-crimson { color: var(--color-crimson); }
+.text-crimson-dark { color: var(--color-crimson-dark); }
+.text-gold { color: var(--color-gold); }
+.text-amber { color: var(--color-amber); }
+.text-ondark { color: var(--color-text-ondark); }
 
-.border-crimson { border-color: var(--color-crimson) !important; }
-.border-gold { border-color: var(--color-gold) !important; }
+.border-crimson { border-color: var(--color-crimson); }
+.border-gold { border-color: var(--color-gold); }
+
+/* Ensure hover text color overrides work reliably */
+.hover\:text-white:hover { color: #ffffff !important; }
 
 /* ============================================================
    Linear Gradients (Explicit & Clean)
@@ -153,12 +156,51 @@ body {
   50% { opacity: 1; transform: scale(1.05); }
 }
 
+@keyframes cracker-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes cracker-spin-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+@keyframes fuse-burn {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px #F59E0B) drop-shadow(0 0 8px #DC2626);
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px #FFD166) drop-shadow(0 0 16px #F59E0B);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes progress {
+  0% { left: -50%; width: 50%; }
+  50% { left: 25%; width: 60%; }
+  100% { left: 100%; width: 40%; }
+}
+
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
 
 .animate-glow {
   animation: glow 2s ease-in-out infinite;
+}
+
+.animate-cracker-spin {
+  animation: cracker-spin 3.5s linear infinite;
+}
+
+.animate-cracker-spin-reverse {
+  animation: cracker-spin-reverse 2.2s linear infinite;
+}
+
+.animate-fuse-burn {
+  animation: fuse-burn 1.2s ease-in-out infinite;
 }
 
 /* Scrollbar */

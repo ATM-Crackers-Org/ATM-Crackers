@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getCategories } from "@/services/category.service";
 import type { Category } from "@/types/category";
 import { CategoryImage } from "@/components/ui/ProductImage";
+import { CrackersLoader } from "@/components/ui/CrackersLoader";
 
 export function CategoryGrid() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -15,7 +16,10 @@ export function CategoryGrid() {
     getCategories()
       .then((data) => {
         if (mounted && data) {
-          setCategories(data.slice(0, 8));
+          const sorted = [...data].sort(
+            (a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999)
+          );
+          setCategories(sorted.slice(0, 8));
         }
       })
       .catch((err) => console.warn("Failed to load categories:", err))
@@ -44,21 +48,14 @@ export function CategoryGrid() {
           </p>
         </div>
 
-        {/* Loading skeleton */}
+        {/* Loading with CrackersLoader */}
         {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 animate-pulse">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm h-48 sm:h-56"
-              >
-                <div className="h-32 sm:h-36 bg-zinc-200" />
-                <div className="p-3 space-y-2">
-                  <div className="h-4 bg-zinc-200 rounded w-3/4" />
-                  <div className="h-3 bg-zinc-100 rounded w-1/2" />
-                </div>
-              </div>
-            ))}
+          <div className="bg-white rounded-3xl border border-zinc-100 p-8 shadow-xs">
+            <CrackersLoader
+              size="md"
+              text="Lighting up Cracker Categories..."
+              subtext="Loading featured Sivakasi fireworks collection"
+            />
           </div>
         )}
 
@@ -103,7 +100,7 @@ export function CategoryGrid() {
         <div className="text-center mt-8">
           <Link
             href="/categories"
-            className="inline-flex items-center gap-2 px-6 py-2.5 border-2 border-crimson text-crimson text-xs sm:text-sm font-bold rounded-xl hover:bg-crimson hover:text-white transition-all"
+            className="inline-flex items-center gap-2 px-6 py-2.5 border-2 border-crimson text-crimson text-xs sm:text-sm font-bold rounded-xl hover:scale-110 transition-all"
           >
             View All Categories →
           </Link>

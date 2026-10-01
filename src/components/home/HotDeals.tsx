@@ -6,6 +6,7 @@ import { getProducts } from "@/services/product.service";
 import { adaptApiProducts } from "@/utils/product.adapter";
 import type { Product } from "@/lib/products";
 import { ProductGrid } from "@/components/product/ProductGrid";
+import { CrackersLoader } from "@/components/ui/CrackersLoader";
 import { LuSparkles } from "react-icons/lu";
 
 export function HotDeals() {
@@ -67,17 +68,12 @@ export function HotDeals() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 animate-pulse">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-zinc-100 h-64 p-3 space-y-3"
-              >
-                <div className="h-36 bg-zinc-200 rounded-xl" />
-                <div className="h-4 bg-zinc-200 rounded w-3/4" />
-                <div className="h-3 bg-zinc-100 rounded w-1/2" />
-              </div>
-            ))}
+          <div className="bg-zinc-50 rounded-3xl border border-zinc-100 p-8 shadow-xs">
+            <CrackersLoader
+              size="md"
+              text="Lighting up 2026 New Arrivals..."
+              subtext="Loading authentic festival fireworks from Sivakasi"
+            />
           </div>
         ) : (
           <ProductGrid products={newArrivals} cols={4} />

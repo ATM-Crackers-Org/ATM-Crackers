@@ -8,6 +8,7 @@ import { StarRating } from "@/components/ui/StarRating";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useToast } from "@/context/ToastContext";
+import { useFlyRocket } from "@/context/FlyRocketContext";
 import { formatPrice } from "@/lib/products";
 import type { Product } from "@/lib/products";
 import { FaHeart, FaEye } from "react-icons/fa";
@@ -23,6 +24,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   const { addToCart, updateQuantity, removeFromCart, items } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const { showToast } = useToast();
+  const { triggerFlyRocket } = useFlyRocket();
 
   const wishlisted = isWishlisted(product.slug);
   const cartItem = items.find(
@@ -37,6 +39,11 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     if (actionType) return;
+
+    // Launch festive rocket to cart
+    if (e.currentTarget) {
+      triggerFlyRocket(e.currentTarget as HTMLElement);
+    }
 
     setActionType("add");
     try {

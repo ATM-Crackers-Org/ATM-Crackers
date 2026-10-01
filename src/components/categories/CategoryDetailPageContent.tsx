@@ -10,6 +10,7 @@ import type { Product as StaticProduct } from "@/lib/products";
 import { adaptApiProduct } from "@/utils/product.adapter";
 import { getCategoryStyle } from "@/lib/categories";
 import { ProductGrid } from "@/components/product/ProductGrid";
+import { CrackersLoader } from "@/components/ui/CrackersLoader";
 import { FaTriangleExclamation, FaArrowLeft } from "react-icons/fa6";
 
 interface CategoryDetailPageContentProps {
@@ -62,8 +63,18 @@ export function CategoryDetailPageContent({
 
   const sortedProducts = useMemo(() => {
     const list = [...adaptedProducts];
-    if (sortBy === "price_asc") list.sort((a, b) => a.price - b.price);
-    else if (sortBy === "price_desc") list.sort((a, b) => b.price - a.price);
+    if (sortBy === "price_asc") {
+      list.sort((a, b) => a.price - b.price);
+    } else if (sortBy === "price_desc") {
+      list.sort((a, b) => b.price - a.price);
+    } else {
+      list.sort((a, b) => {
+        const orderA = a.display_order ?? 999;
+        const orderB = b.display_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      });
+    }
     return list;
   }, [adaptedProducts, sortBy]);
 
@@ -79,14 +90,14 @@ export function CategoryDetailPageContent({
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-warm-white py-8">
-        <div className="max-w-360 mx-auto px-4 md:px-6 lg:px-8 animate-pulse space-y-6">
-          <div className="h-4 bg-zinc-200 rounded w-48" />
-          <div className="h-40 bg-zinc-200 rounded-3xl" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-64 bg-zinc-100 rounded-2xl" />
-            ))}
+      <main className="min-h-screen bg-warm-white py-12">
+        <div className="max-w-360 mx-auto px-4 md:px-6 lg:px-8">
+          <div className="bg-white rounded-3xl border border-zinc-100 p-8 shadow-xs">
+            <CrackersLoader
+              size="lg"
+              text="Lighting up Category Fireworks..."
+              subtext="Loading authentic festival collection directly from factory"
+            />
           </div>
         </div>
       </main>

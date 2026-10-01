@@ -78,6 +78,12 @@ export async function getProducts(
 ): Promise<Product[]> {
   const s = params?.search?.trim() || "";
   const c = params?.category?.trim() || "";
+
+  // Product search requires minimum 3 characters to activate API call
+  if (params?.search !== undefined && s.length > 0 && s.length < 3) {
+    return [];
+  }
+
   const key = `products:${s}:${c}`;
 
   if (forceRefresh) {

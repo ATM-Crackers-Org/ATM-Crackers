@@ -12,9 +12,11 @@ import { DiscountBadge, Badge } from "@/components/ui/Badge";
 import { StarRating } from "@/components/ui/StarRating";
 import { QuantitySelector } from "@/components/ui/QuantitySelector";
 import { ProductCarousel } from "@/components/product/ProductCarousel";
+import { CrackersLoader } from "@/components/ui/CrackersLoader";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useToast } from "@/context/ToastContext";
+import { useFlyRocket } from "@/context/FlyRocketContext";
 import {
   FaCartShopping,
   FaBolt,
@@ -45,6 +47,7 @@ export function ProductDetailPageContent({ slug }: ProductDetailPageContentProps
   const { addToCart, updateQuantity, items } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const { showToast } = useToast();
+  const { triggerFlyRocket } = useFlyRocket();
 
   // Find if current product is already in the cart
   const cartItem = product
@@ -108,8 +111,13 @@ export function ProductDetailPageContent({ slug }: ProductDetailPageContentProps
     };
   }, [slug]);
 
-  async function handleAddToCart() {
+  async function handleAddToCart(e?: React.MouseEvent) {
     if (!product || isAdding) return;
+
+    if (!inCart && e?.currentTarget) {
+      triggerFlyRocket(e.currentTarget as HTMLElement);
+    }
+
     setIsAdding(true);
     try {
       if (inCart) {
@@ -131,25 +139,17 @@ export function ProductDetailPageContent({ slug }: ProductDetailPageContentProps
     }
   }
 
-  // ─── Loading Skeleton ────────────────────────────────────────────────────────
+  // ─── Loading State ───────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <main className="bg-warm-white min-h-screen">
-        <div className="max-w-360 mx-auto px-4 md:px-6 lg:px-8 py-8 animate-pulse">
-          {/* Breadcrumb skeleton */}
-          <div className="h-4 w-48 bg-zinc-200 rounded mb-6" />
-
-          {/* Product main skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            <div className="h-80 md:h-96 bg-zinc-200 rounded-3xl" />
-            <div className="space-y-4">
-              <div className="h-6 w-24 bg-zinc-200 rounded-full" />
-              <div className="h-4 w-32 bg-zinc-200 rounded" />
-              <div className="h-8 w-3/4 bg-zinc-200 rounded" />
-              <div className="h-4 w-28 bg-zinc-200 rounded" />
-              <div className="h-24 bg-zinc-200 rounded-2xl" />
-              <div className="h-12 w-full bg-zinc-200 rounded-2xl" />
-            </div>
+      <main className="bg-warm-white min-h-screen py-16 flex items-center justify-center">
+        <div className="max-w-md mx-auto px-4 w-full">
+          <div className="bg-white rounded-3xl border border-zinc-100 p-8 shadow-xs">
+            <CrackersLoader
+              size="lg"
+              text="Lighting up Cracker Details..."
+              subtext="Fetching high-resolution product specs & festival pricing"
+            />
           </div>
         </div>
       </main>

@@ -3,6 +3,8 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { FlyRocketProvider } from "@/context/FlyRocketContext";
+import { LegalNoticeModal } from "@/components/common/LegalNoticeModal";
 
 export const metadata: Metadata = {
   title: {
@@ -39,7 +41,12 @@ export default function RootLayout({
       <body className="min-h-screen bg-warm-white antialiased font-sans">
         <ToastProvider>
           <CartProvider>
-            <WishlistProvider>{children}</WishlistProvider>
+            <WishlistProvider>
+              <FlyRocketProvider>
+                {children}
+                <LegalNoticeModal />
+              </FlyRocketProvider>
+            </WishlistProvider>
           </CartProvider>
         </ToastProvider>
       </body>

@@ -2,19 +2,19 @@ import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { TrackOrderPageContent } from "@/components/order/TrackOrderPageContent";
+import { MyOrdersPageContent } from "@/components/order/MyOrdersPageContent";
 
 export const metadata = {
-  title: "Track Order | ATM Crackers",
-  description: "Track your Sivakasi fireworks dispatch and transport status in real time.",
+  title: "My Orders | ATM Crackers",
+  description: "View and track all fireworks orders placed in your current session.",
 };
 
-export default function TrackOrderPage() {
+export default function MyOrdersPage() {
   return (
     <div className="has-mobile-nav">
       <AnnouncementBar />
       <Header />
-      <TrackOrderPageContent />
+      <MyOrdersPageContent />
       <Footer />
       <MobileNav />
     </div>

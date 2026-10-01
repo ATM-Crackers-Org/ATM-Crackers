@@ -21,7 +21,7 @@ const FAQS = [
   },
   {
     q: "What is the minimum order value?",
-    a: "Minimum order value is just ₹500, and orders above ₹999 qualify for standard FREE delivery across Tamil Nadu.",
+    a: "Minimum order value is just ₹3000 deliver in all over India.",
   },
 ];
 

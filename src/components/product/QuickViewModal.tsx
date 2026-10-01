@@ -11,6 +11,7 @@ import { QuantitySelector } from "@/components/ui/QuantitySelector";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useToast } from "@/context/ToastContext";
+import { useFlyRocket } from "@/context/FlyRocketContext";
 import { IoClose } from "react-icons/io5";
 import { FaCartShopping, FaHeart, FaRegHeart, FaArrowRight, FaCheck } from "react-icons/fa6";
 
@@ -23,6 +24,7 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
   const { addToCart, updateQuantity, items } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const { showToast } = useToast();
+  const { triggerFlyRocket } = useFlyRocket();
 
   const cartItem = items.find(
     (i) =>
@@ -54,8 +56,13 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
   const [isAdding, setIsAdding] = useState(false);
   const wishlisted = isWishlisted(product.slug);
 
-  async function handleAddToCart() {
+  async function handleAddToCart(e?: React.MouseEvent) {
     if (isAdding) return;
+
+    if (!inCart && e?.currentTarget) {
+      triggerFlyRocket(e.currentTarget as HTMLElement);
+    }
+
     setIsAdding(true);
     try {
       if (inCart) {

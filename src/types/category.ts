@@ -37,6 +37,7 @@ export interface CategoryRef {
   id: string;
   name: string;
   slug: string;
+  displayOrder?: number;
 }
 
 // ─── Typed response aliases ────────────────────────────────────────────────────
