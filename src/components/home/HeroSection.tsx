@@ -10,26 +10,102 @@ export function HeroSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const bgVideoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
 
+  // Track unmuted audio playback duration (auto-mute after first 20 seconds)
+  const unmutedDurationRef = useRef<number>(0);
+  const lastTimeRef = useRef<number | null>(null);
+  const hasAutoMutedRef = useRef<boolean>(false);
+
   useEffect(() => {
-    // Ensure muted autoplay starts smoothly across all browsers & iOS/Android
+    let removeListeners: (() => void) | null = null;
+
+    // Attempt default unmuted playback
     if (videoRef.current) {
-      videoRef.current.muted = true;
-      videoRef.current.play().catch(() => {
-        setIsPlaying(false);
-      });
+      videoRef.current.muted = false;
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsMuted(false);
+            setIsPlaying(true);
+            lastTimeRef.current = performance.now();
+          })
+          .catch(() => {
+            // Modern browsers block autoplay with sound before user interaction.
+            // Fallback to muted autoplay so video starts playing immediately,
+            // and unmute automatically on the user's first interaction anywhere on page.
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              setIsMuted(true);
+              videoRef.current.play().catch(() => setIsPlaying(false));
+            }
+
+            const enableAudioOnInteraction = () => {
+              if (videoRef.current && !hasAutoMutedRef.current) {
+                videoRef.current.muted = false;
+                setIsMuted(false);
+                lastTimeRef.current = performance.now();
+                videoRef.current.play().catch(() => {});
+              }
+              if (removeListeners) removeListeners();
+            };
+
+            removeListeners = () => {
+              window.removeEventListener("click", enableAudioOnInteraction);
+              window.removeEventListener("touchstart", enableAudioOnInteraction);
+              window.removeEventListener("keydown", enableAudioOnInteraction);
+            };
+
+            window.addEventListener("click", enableAudioOnInteraction, { once: true });
+            window.addEventListener("touchstart", enableAudioOnInteraction, { once: true });
+            window.addEventListener("keydown", enableAudioOnInteraction, { once: true });
+          });
+      }
     }
     if (bgVideoRef.current) {
       bgVideoRef.current.muted = true;
       bgVideoRef.current.play().catch(() => { });
     }
+
+    return () => {
+      if (removeListeners) {
+        removeListeners();
+      }
+    };
   }, []);
+
+  const handleTimeUpdate = () => {
+    if (hasAutoMutedRef.current || !videoRef.current) return;
+
+    if (!videoRef.current.muted && !videoRef.current.paused) {
+      const now = performance.now();
+      if (lastTimeRef.current !== null) {
+        const deltaSec = (now - lastTimeRef.current) / 1000;
+        // Check deltaSec is valid to guard against background inactive tabs
+        if (deltaSec > 0 && deltaSec < 1.5) {
+          unmutedDurationRef.current += deltaSec;
+        }
+      }
+      lastTimeRef.current = now;
+
+      // When 20 seconds of audio have played, automatically mute
+      if (unmutedDurationRef.current >= 20) {
+        videoRef.current.muted = true;
+        setIsMuted(true);
+        hasAutoMutedRef.current = true;
+        lastTimeRef.current = null;
+      }
+    } else {
+      lastTimeRef.current = null;
+    }
+  };
 
   const togglePlay = () => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
+      lastTimeRef.current = performance.now();
       videoRef.current.play().then(() => {
         setIsPlaying(true);
         if (bgVideoRef.current && bgVideoRef.current.paused) {
@@ -37,6 +113,7 @@ export function HeroSection() {
         }
       }).catch(() => { });
     } else {
+      lastTimeRef.current = null;
       videoRef.current.pause();
       setIsPlaying(false);
       if (bgVideoRef.current && !bgVideoRef.current.paused) {
@@ -50,6 +127,11 @@ export function HeroSection() {
     const nextMuted = !isMuted;
     videoRef.current.muted = nextMuted;
     setIsMuted(nextMuted);
+    if (nextMuted) {
+      lastTimeRef.current = null;
+    } else {
+      lastTimeRef.current = performance.now();
+    }
   };
 
   return (
@@ -208,6 +290,7 @@ export function HeroSection() {
                     muted={isMuted}
                     playsInline
                     onLoadedData={() => setIsVideoLoaded(true)}
+                    onTimeUpdate={handleTimeUpdate}
                     className={`w-full h-full object-cover cursor-pointer transition-opacity duration-700 ${isVideoLoaded ? "opacity-100" : "opacity-0"
                       }`}
                     onClick={togglePlay}
