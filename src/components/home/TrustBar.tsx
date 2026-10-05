@@ -4,7 +4,7 @@ const TRUST_ITEMS = [
   { icon: FaIndustry, label: "Factory Direct", desc: "Wholesale Sivakasi rates" },
   { icon: FaCircleCheck, label: "Quality Checked", desc: "100% Tested for safety" },
   { icon: FaBoxOpen, label: "Secure Packaging", desc: "Triple-layer insulated" },
-  { icon: FaTruckFast, label: "Fast Delivery", desc: "Doorstep tracking" },
+  { icon: FaTruckFast, label: "Pan-India Delivery", desc: "Min. order ₹3,000" },
   { icon: FaWhatsapp, label: "WhatsApp Support", desc: "Staff assistance 24/7" },
 ];
 

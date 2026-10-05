@@ -8,6 +8,7 @@ import { ProductImage } from "@/components/ui/ProductImage";
 import { QuantitySelector } from "@/components/ui/QuantitySelector";
 import { formatPrice } from "@/lib/products";
 import type { Product } from "@/lib/products";
+import { MINIMUM_ORDER_AMOUNT } from "@/lib/constants";
 import { getProducts } from "@/services/product.service";
 import { adaptApiProducts } from "@/utils/product.adapter";
 import { ProductCarousel } from "@/components/product/ProductCarousel";
@@ -65,6 +66,12 @@ export function CartPageContent() {
     );
   const effectiveTotal = summary?.grandTotal ?? total;
   const finalPayable = effectiveTotal;
+  const isMinimumMet = finalPayable >= MINIMUM_ORDER_AMOUNT;
+  const remainingForMinOrder = Math.max(0, MINIMUM_ORDER_AMOUNT - finalPayable);
+  const minOrderProgress = Math.min(
+    100,
+    Math.round((finalPayable / MINIMUM_ORDER_AMOUNT) * 100)
+  );
 
   // ─── Handlers with API Sync ─────────────────────────────────
 
@@ -355,13 +362,68 @@ export function CartPageContent() {
                 )}
               </div>
 
-              <Link
-                href="/checkout"
-                className="flex items-center justify-center gap-2 w-full py-4 bg-crimson text-white text-sm font-bold rounded-2xl text-center hover:bg-[#991B1B] shadow-[0_4px_20px_rgba(185,28,28,0.3)] transition-all"
-              >
-                <span>Proceed to Checkout</span>
-                <FaArrowRight className="text-xs" />
-              </Link>
+              {/* Minimum Order Value Tracker */}
+              {isMinimumMet ? (
+                <div className="mb-5 p-3 rounded-xl border border-emerald-200 bg-emerald-50/70 text-emerald-800 text-xs">
+                  <div className="flex items-center gap-1.5 font-bold mb-1">
+                    <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">✓</span>
+                    <span>Minimum Order Requirement Met</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700">
+                    Your cart total meets the {formatPrice(MINIMUM_ORDER_AMOUNT)} minimum order requirement for dispatch.
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-5 p-3.5 rounded-xl border border-amber-200 bg-amber-50/80 text-amber-900 text-xs shadow-xs">
+                  <div className="flex items-center justify-between font-bold mb-1.5">
+                    <span className="flex items-center gap-1.5 text-amber-900">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      Min. Order: {formatPrice(MINIMUM_ORDER_AMOUNT)}
+                    </span>
+                    <span className="text-[11px] text-crimson font-black">
+                      Add {formatPrice(remainingForMinOrder)} more
+                    </span>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-amber-100 rounded-full h-2 overflow-hidden mb-1.5">
+                    <div
+                      className="bg-linear-to-r from-amber-500 to-crimson h-full rounded-full transition-all duration-500"
+                      style={{ width: `${minOrderProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-tight">
+                    Minimum purchase of {formatPrice(MINIMUM_ORDER_AMOUNT)} is required to place an order from Sivakasi factory.
+                  </p>
+                </div>
+              )}
+
+              {isMinimumMet ? (
+                <Link
+                  href="/checkout"
+                  className="flex items-center justify-center gap-2 w-full py-4 bg-crimson text-white text-sm font-bold rounded-2xl text-center hover:bg-[#991B1B] shadow-[0_4px_20px_rgba(185,28,28,0.3)] transition-all cursor-pointer"
+                >
+                  <span>Proceed to Checkout</span>
+                  <FaArrowRight className="text-xs" />
+                </Link>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    disabled
+                    className="flex items-center justify-center gap-2 w-full py-3.5 bg-zinc-100 border border-zinc-200 text-zinc-400 text-xs font-bold rounded-2xl text-center cursor-not-allowed"
+                    title={`Minimum order of ${formatPrice(MINIMUM_ORDER_AMOUNT)} required`}
+                  >
+                    <span>Min Order ₹{MINIMUM_ORDER_AMOUNT.toLocaleString("en-IN")} Required</span>
+                  </button>
+                  <Link
+                    href="/shop"
+                    className="flex items-center justify-center gap-2 w-full py-3.5 bg-crimson text-white text-xs sm:text-sm font-bold rounded-2xl text-center hover:bg-[#991B1B] shadow-md shadow-crimson/25 transition-all"
+                  >
+                    <FaCartShopping className="text-xs" />
+                    <span>+ Add ₹{remainingForMinOrder.toLocaleString("en-IN")} More to Checkout</span>
+                  </Link>
+                </div>
+              )}
 
               <Link
                 href="/shop"

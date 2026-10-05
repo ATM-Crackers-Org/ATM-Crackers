@@ -182,7 +182,7 @@ export function HeroSection() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
               </span>
-              Direct From Sivakasi Factories • 2026 Collection
+              Direct From Sivakasi Factories • Min. Order ₹3,000 • 2026 Collection
             </div>
 
             {/* Main Headline */}

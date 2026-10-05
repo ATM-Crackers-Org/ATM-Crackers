@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { StoreProvider } from "@/store/StoreProvider";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { WishlistProvider } from "@/context/WishlistContext";
@@ -39,16 +40,18 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body className="min-h-screen bg-warm-white antialiased font-sans">
-        <ToastProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <FlyRocketProvider>
-                {children}
-                <LegalNoticeModal />
-              </FlyRocketProvider>
-            </WishlistProvider>
-          </CartProvider>
-        </ToastProvider>
+        <StoreProvider>
+          <ToastProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <FlyRocketProvider>
+                  {children}
+                  <LegalNoticeModal />
+                </FlyRocketProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </ToastProvider>
+        </StoreProvider>
       </body>
     </html>
   );

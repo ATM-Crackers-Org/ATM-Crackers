@@ -1,14 +1,3 @@
-/**
- * Category Service — all API calls for the /categories resource.
- *
- * Endpoints covered:
- *   GET /categories                         → getCategories()
- *   GET /categories/:identifier             → getCategoryBySlug(slug)
- *   GET /categories/:identifier/products    → getCategoryProducts(slug)
- *
- * Usage:
- *   import { getCategories, getCategoryBySlug, getCategoryProducts } from "@/services/category.service";
- */
 
 import api from "@/lib/axiosInstance";
 import type {
@@ -18,7 +7,6 @@ import type {
 } from "@/types/category";
 import type { Product, ProductListResponse } from "@/types/product";
 
-// ─── Deduplication & Memory Cache ─────────────────────────────────────────────
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes TTL
 
 interface CacheEntry<T> {
@@ -64,13 +52,7 @@ export function clearCategoryCache(): void {
   pendingRequests.clear();
 }
 
-// ─── GET /categories ───────────────────────────────────────────────────────────
 
-/**
- * Fetches all active categories ordered by displayOrder.
- * Results are deduplicated and cached in-memory to prevent repeated/unwanted API calls.
- * @returns Array of Category objects
- */
 export async function getCategories(forceRefresh = false): Promise<Category[]> {
   const key = "categories:all";
   if (forceRefresh) {
@@ -82,13 +64,7 @@ export async function getCategories(forceRefresh = false): Promise<Category[]> {
   });
 }
 
-// ─── GET /categories/:identifier ──────────────────────────────────────────────
 
-/**
- * Fetches a single category by its slug or id.
- * @param identifier  slug (e.g. "one-sound-crackers") or MongoDB id
- * @returns Category object
- */
 export async function getCategoryBySlug(
   identifier: string,
   forceRefresh = false
@@ -106,13 +82,7 @@ export async function getCategoryBySlug(
   });
 }
 
-// ─── GET /categories/:identifier/products ─────────────────────────────────────
 
-/**
- * Fetches all active products for a given category.
- * @param identifier  category slug or id
- * @returns Array of Product objects
- */
 export async function getCategoryProducts(
   identifier: string,
   forceRefresh = false
@@ -130,12 +100,7 @@ export async function getCategoryProducts(
   });
 }
 
-// ─── getCategoryWithProducts (combined helper) ─────────────────────────────────
 
-/**
- * Convenience: fetches the category metadata AND its products in parallel.
- * @param identifier  slug or id
- */
 export async function getCategoryWithProducts(identifier: string): Promise<{
   category: Category;
   products: Product[];

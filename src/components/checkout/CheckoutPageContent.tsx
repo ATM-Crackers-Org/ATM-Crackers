@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { formatPrice } from "@/lib/products";
+import { MINIMUM_ORDER_AMOUNT } from "@/lib/constants";
 import { ProductImage } from "@/components/ui/ProductImage";
 import { createOrder, previewCheckout } from "@/services/order.service";
 import type { DeliveryMethod, CheckoutPreviewData } from "@/types/order";
@@ -23,32 +24,34 @@ import {
   FaHouse,
 } from "react-icons/fa6";
 
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  updateFormField,
+  setAppliedCoupon,
+  removeAppliedCoupon,
+  setPreviewTotals,
+  setIsApplyingCoupon,
+  setCouponError,
+  resetCheckout,
+  selectCheckoutForm,
+  selectAppliedCoupon,
+  selectPreviewTotals,
+  selectIsApplyingCoupon,
+  selectCouponError,
+  type CheckoutFormData,
+} from "@/store/slices/checkoutSlice";
+
 export function CheckoutPageContent() {
   const { items, total, clearCart } = useCart();
   const { showToast } = useToast();
+  const dispatch = useAppDispatch();
 
-  // Single-step Form State
-  const [formData, setFormData] = useState({
-    fullName: "",
-    phone: "",
-    email: "",
-    streetAddress: "",
-    city: "",
-    state: "Tamil Nadu",
-    pincode: "",
-    landmark: "",
-    deliveryOption: "STANDARD" as DeliveryMethod, // "STANDARD" | "EXPRESS"
-    paymentMethod: "MANUAL" as const, // Fixed to MANUAL as per backend requirement
-    promoCode: "",
-  });
-
-  const [appliedCoupon, setAppliedCoupon] = useState<{
-    code: string;
-    discountAmount: number;
-  } | null>(null);
-  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
-  const [couponError, setCouponError] = useState("");
-  const [previewTotals, setPreviewTotals] = useState<CheckoutPreviewData | null>(null);
+  // Redux Checkout State (persists across navigation)
+  const formData = useAppSelector(selectCheckoutForm);
+  const appliedCoupon = useAppSelector(selectAppliedCoupon);
+  const previewTotals = useAppSelector(selectPreviewTotals);
+  const isApplyingCoupon = useAppSelector(selectIsApplyingCoupon);
+  const couponError = useAppSelector(selectCouponError);
 
   // Submission & Result State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,23 +73,32 @@ export function CheckoutPageContent() {
     ? previewTotals.grandTotal
     : Math.max(0, total - couponDiscount);
 
+  const isMinimumMet = grandTotal >= MINIMUM_ORDER_AMOUNT;
+  const remainingForMinOrder = Math.max(0, MINIMUM_ORDER_AMOUNT - grandTotal);
+
   function handleInputChange(
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    dispatch(
+      updateFormField({
+        field: name as keyof CheckoutFormData,
+        value: value as any,
+      })
+    );
   }
 
   async function handleApplyCoupon() {
-    setCouponError("");
+    dispatch(setCouponError(""));
     const code = formData.promoCode.trim().toUpperCase();
     if (!code) {
-      setCouponError("Please enter a coupon code");
+      dispatch(setCouponError("Please enter a coupon code"));
       return;
     }
 
-    setIsApplyingCoupon(true);
+    dispatch(setIsApplyingCoupon(true));
 
     try {
       const cleanPhone = formData.phone.trim().replace(/\D/g, "");
@@ -116,12 +128,14 @@ export function CheckoutPageContent() {
       const data: CheckoutPreviewData = response.data;
       const discount = data.couponDiscount ?? data.totalDiscount ?? 0;
 
-      setAppliedCoupon({
-        code: data.couponCode || code,
-        discountAmount: discount,
-      });
+      dispatch(
+        setAppliedCoupon({
+          code: data.couponCode || code,
+          discountAmount: discount,
+        })
+      );
 
-      setPreviewTotals(data);
+      dispatch(setPreviewTotals(data));
 
       showToast(
         `Coupon '${data.couponCode || code}' applied! Saved ${formatPrice(discount)}`,
@@ -136,23 +150,28 @@ export function CheckoutPageContent() {
         apiErr?.response?.data?.message ||
         apiErr?.message ||
         "Invalid or inactive coupon code.";
-      setCouponError(errorMsg);
+      dispatch(setCouponError(errorMsg));
       showToast(errorMsg, "error");
     } finally {
-      setIsApplyingCoupon(false);
+      dispatch(setIsApplyingCoupon(false));
     }
   }
 
   function handleRemoveCoupon() {
-    setAppliedCoupon(null);
-    setPreviewTotals(null);
-    setCouponError("");
-    setFormData((prev) => ({ ...prev, promoCode: "" }));
+    dispatch(removeAppliedCoupon());
     showToast("Coupon removed", "success");
   }
 
   async function handleSubmitOrder(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!isMinimumMet) {
+      showToast(
+        `Minimum order purchase amount is ${formatPrice(MINIMUM_ORDER_AMOUNT)}. Please add ${formatPrice(remainingForMinOrder)} more to proceed.`,
+        "error"
+      );
+      return;
+    }
 
     // Client-side Validation
     if (!formData.fullName.trim()) {
@@ -242,6 +261,7 @@ export function CheckoutPageContent() {
       setConfirmedOrderId(orderId);
       setIsSuccess(true);
       await clearCart();
+      dispatch(resetCheckout());
       showToast("Order placed successfully!", "success");
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string } }; message?: string };
@@ -338,7 +358,7 @@ export function CheckoutPageContent() {
                   <FaTruckFast className="text-zinc-400 text-xs" /> Delivery Mode:
                 </span>
                 <span className="font-semibold text-amber-800">
-                  Standard Sivakasi Lorry Transport (Freight To-Pay at Godown)
+                  Delivery via Lorry Transport (Freight To-Pay at Godown)
                 </span>
               </div>
               <div className="flex justify-between text-sm">
@@ -448,6 +468,30 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
         ) : (
           /* ─── SINGLE-STEP CHECKOUT FORM ─────────────────────────── */
           <form onSubmit={handleSubmitOrder}>
+            {/* Minimum Order Warning if grandTotal < MINIMUM_ORDER_AMOUNT */}
+            {!isMinimumMet && (
+              <div className="mb-6 p-4 md:p-5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl mt-0.5 select-none">⚠️</span>
+                  <div>
+                    <h3 className="text-sm font-bold text-amber-950">
+                      Minimum Order Requirement: {formatPrice(MINIMUM_ORDER_AMOUNT)}
+                    </h3>
+                    <p className="text-xs text-amber-800 mt-0.5">
+                      Your current order total is <strong className="text-zinc-900">{formatPrice(grandTotal)}</strong>. Minimum purchase of <strong className="text-zinc-900">{formatPrice(MINIMUM_ORDER_AMOUNT)}</strong> is required for parcel dispatch from Sivakasi factory. Please add <strong className="text-crimson font-black">{formatPrice(remainingForMinOrder)}</strong> more.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/shop"
+                  className="shrink-0 px-4 py-2.5 bg-crimson text-white text-xs font-bold rounded-xl hover:bg-[#991B1B] transition-colors text-center shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  <FaCartShopping className="text-xs" />
+                  <span>Add More Crackers</span>
+                </Link>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left Column: Unified Checkout Form */}
               <div className="lg:col-span-7 space-y-6">
@@ -620,7 +664,6 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                   </div>
                 </div>
 
-                {/* 2. Delivery Method (Standard Lorry Transport Only - No Options) */}
                 <div className="bg-white rounded-3xl p-6 md:p-8 border border-zinc-100 shadow-sm">
                   <div className="mb-4 pb-3 border-b border-zinc-100">
                     <h2 className="text-xl font-display font-bold text-zinc-900">
@@ -639,7 +682,7 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
                       <div className="flex-1">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <p className="font-bold text-zinc-900 text-sm">
-                            Standard Fireworks Lorry Transport (Direct from Sivakasi)
+                            Delivery via Lorry Transport (Direct from Sivakasi)
                           </p>
                           <span className="text-xs font-bold text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-full border border-amber-200">
                             Freight To-Pay at Godown
@@ -822,22 +865,40 @@ Please share UPI / GPay payment details to confirm and dispatch my order. Thank 
 
                   {/* Submit Button */}
                   <div className="mt-6">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-4 bg-crimson text-white font-bold rounded-2xl hover:bg-[#991B1B] shadow-lg transition-all text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <FaSpinner className="animate-spin text-base" /> Booking
-                          Order...
-                        </>
-                      ) : (
-                        <>
-                          <FaCheck /> Book Order &amp; Pay on WhatsApp ({formatPrice(grandTotal)})
-                        </>
-                      )}
-                    </button>
+                    {isMinimumMet ? (
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-4 bg-crimson text-white font-bold rounded-2xl hover:bg-[#991B1B] shadow-lg transition-all text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <FaSpinner className="animate-spin text-base" /> Booking
+                            Order...
+                          </>
+                        ) : (
+                          <>
+                            <FaCheck /> Book Order &amp; Pay on WhatsApp ({formatPrice(grandTotal)})
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="space-y-2.5">
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full py-4 bg-zinc-200 text-zinc-500 font-bold rounded-2xl text-xs sm:text-sm cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          Min Order ₹{MINIMUM_ORDER_AMOUNT.toLocaleString("en-IN")} Required (Add {formatPrice(remainingForMinOrder)})
+                        </button>
+                        <Link
+                          href="/shop"
+                          className="w-full py-3.5 bg-crimson text-white font-bold rounded-2xl hover:bg-[#991B1B] shadow-md transition-all text-xs sm:text-sm flex items-center justify-center gap-2 text-center"
+                        >
+                          <FaCartShopping /> + Add More Crackers from Shop
+                        </Link>
+                      </div>
+                    )}
                   </div>
 
                   {/* WhatsApp Support Help Box */}
