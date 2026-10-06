@@ -4,7 +4,13 @@ import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getProducts } from "@/services/product.service";
+import { getCategories } from "@/services/category.service";
 import { adaptApiProducts } from "@/utils/product.adapter";
+import {
+  searchCategories,
+  searchProducts,
+  CategorySearchItem,
+} from "@/utils/search.utils";
 import type { Product } from "@/lib/products";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { SearchableCategoryDropdown } from "@/components/ui/SearchableCategoryDropdown";
@@ -18,11 +24,10 @@ function SearchPageInner() {
 
   const [query, setQuery] = useState(initialQuery);
   const [searchTerm, setSearchTerm] = useState(initialQuery);
-  const [searchError, setSearchError] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recommended");
-  const [apiResults, setApiResults] = useState<Product[] | null>(null);
   const [allCatalogProducts, setAllCatalogProducts] = useState<Product[]>([]);
+  const [allCategories, setAllCategories] = useState<CategorySearchItem[]>([]);
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
 
@@ -30,15 +35,25 @@ function SearchPageInner() {
 
   useEffect(() => {
     let mounted = true;
-    getProducts()
-      .then((prods) => {
-        if (mounted && prods) {
-          const adapted = adaptApiProducts(prods);
-          setAllCatalogProducts(adapted);
-          setRecommendations(adapted.slice(0, 8));
-        }
-      })
-      .catch(() => {});
+    Promise.allSettled([getProducts(), getCategories()]).then(([prodsRes, catsRes]) => {
+      if (!mounted) return;
+      if (prodsRes.status === "fulfilled" && prodsRes.value) {
+        const adapted = adaptApiProducts(prodsRes.value);
+        setAllCatalogProducts(adapted);
+        setRecommendations(adapted.slice(0, 8));
+      }
+      if (catsRes.status === "fulfilled" && catsRes.value) {
+        setAllCategories(
+          catsRes.value.map((c) => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug,
+            productCount: c.productCount ?? 0,
+            displayOrder: c.displayOrder ?? 999,
+          }))
+        );
+      }
+    });
 
     return () => {
       mounted = false;
@@ -48,60 +63,21 @@ function SearchPageInner() {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const clean = query.trim();
-    if (clean.length > 0 && clean.length < 3) {
-      setSearchError("Please enter at least 3 characters to search fireworks.");
-      return;
-    }
-    setSearchError("");
     setSearchTerm(clean);
     setSelectedCategory("all");
-    if (!clean) {
-      setApiResults(null);
-    }
   }
 
-  useEffect(() => {
-    // Only activate API search call if minimum 3 characters are typed
-    if (!searchTerm || searchTerm.trim().length < 3) {
-      setApiResults(null);
-      return;
-    }
+  // Matching Categories for current query
+  const matchedCategories = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    return searchCategories(searchTerm, allCategories);
+  }, [searchTerm, allCategories]);
 
-    let mounted = true;
-    setSearching(true);
-    getProducts({ search: searchTerm.trim() })
-      .then((prods) => {
-        if (mounted && prods) {
-          setApiResults(adaptApiProducts(prods));
-        }
-      })
-      .catch((err) => {
-        console.warn("Live search API failed, falling back to local search:", err);
-      })
-      .finally(() => {
-        if (mounted) setSearching(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [searchTerm]);
-
+  // Instant Smart Ranked Search across catalog & matching categories
   const results = useMemo(() => {
-    if (!searchTerm) return [];
-    if (apiResults && apiResults.length > 0) return apiResults;
-    // Smart local fallback if backend API search only indexes product names
-    const q = searchTerm.trim().toLowerCase();
-    if (allCatalogProducts.length > 0) {
-      return allCatalogProducts.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.category_name?.toLowerCase().includes(q) ||
-          p.description?.toLowerCase().includes(q)
-      );
-    }
-    return [];
-  }, [searchTerm, apiResults, allCatalogProducts]);
+    if (!searchTerm.trim()) return [];
+    return searchProducts(searchTerm, allCatalogProducts, matchedCategories);
+  }, [searchTerm, allCatalogProducts, matchedCategories]);
 
   const categoriesInResults = useMemo(() => {
     const map = new Map<string, { id: string; name: string; count: number }>();
@@ -165,13 +141,6 @@ function SearchPageInner() {
             <span>Search</span>
           </button>
         </form>
-
-        {/* Minimum character validation error */}
-        {searchError && (
-          <div className="mb-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
-            <span>✨ {searchError}</span>
-          </div>
-        )}
 
         {/* Dynamic Category & Product Popular Tags */}
         <div className="space-y-2 mt-3">

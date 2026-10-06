@@ -6,10 +6,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { getProducts } from "@/services/product.service";
 import { getCategories } from "@/services/category.service";
 import { adaptApiProducts } from "@/utils/product.adapter";
+import { searchCategories, searchProducts } from "@/utils/search.utils";
 import type { Product } from "@/lib/products";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { CrackersLoader } from "@/components/ui/CrackersLoader";
-import { FaSearch, FaSlidersH } from "react-icons/fa";
+import { FaSearch, FaSlidersH, FaFire } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 
 type SortOption = "recommended" | "price_asc" | "price_desc" | "rating" | "newest";
@@ -186,6 +187,7 @@ function FilterContent({
 interface ShopContentProps {
   initialCategory: string;
   filterParam: string;
+  initialSearch?: string;
 }
 
 interface CategoryGroup {
@@ -199,9 +201,11 @@ interface CategoryGroup {
 function ShopContent({
   initialCategory,
   filterParam,
+  initialSearch = "",
 }: ShopContentProps) {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
+  const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -211,6 +215,13 @@ function ShopContent({
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+  // Sync search query if URL initialSearch changes
+  useEffect(() => {
+    if (initialSearch !== undefined) {
+      setSearchQuery(initialSearch);
+    }
+  }, [initialSearch]);
 
   useEffect(() => {
     let mounted = true;
@@ -279,21 +290,92 @@ function ShopContent({
     );
   }, [categories, selectedCategory]);
 
+  const [apiSearchResults, setApiSearchResults] = useState<Product[] | null>(null);
+  const [isSearchingApi, setIsSearchingApi] = useState(false);
+
+  // Trigger live API search when minimum 3 characters are typed
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 3) {
+      setApiSearchResults(null);
+      setIsSearchingApi(false);
+      return;
+    }
+
+    let active = true;
+    setIsSearchingApi(true);
+
+    const timer = setTimeout(() => {
+      getProducts({ search: q })
+        .then((data) => {
+          if (active && data) {
+            setApiSearchResults(adaptApiProducts(data));
+          }
+        })
+        .catch((err) => {
+          console.warn("Product page API search failed, using local match:", err);
+        })
+        .finally(() => {
+          if (active) setIsSearchingApi(false);
+        });
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const isSearchActive = Boolean(searchQuery.trim().length >= 3);
+
+  // Matching Categories for current search query
+  const matchedSearchCategories = useMemo(() => {
+    const q = searchQuery.trim();
+    if (q.length < 3) return [];
+    return searchCategories(q, categories);
+  }, [searchQuery, categories]);
+
+  // Matching Products for current search query (Instant 0ms token & category match + API results sync)
+  const searchedProducts = useMemo(() => {
+    const q = searchQuery.trim();
+    if (q.length < 3) return allProducts;
+
+    const localMatches = searchProducts(q, allProducts, matchedSearchCategories);
+
+    if (apiSearchResults && apiSearchResults.length > 0) {
+      const seen = new Set(localMatches.map((p) => p.id || p.slug));
+      const merged = [...localMatches];
+      for (const p of apiSearchResults) {
+        const key = p.id || p.slug;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(p);
+        }
+      }
+      return merged;
+    }
+
+    return localMatches;
+  }, [searchQuery, allProducts, matchedSearchCategories, apiSearchResults]);
+
   // Check if any filter is active
   const hasActiveFilter = useMemo(() => {
     return (
+      isSearchActive ||
       selectedCategory !== "all" ||
       Boolean(filterParam) ||
       sortBy !== "recommended"
     );
-  }, [selectedCategory, filterParam, sortBy]);
+  }, [isSearchActive, selectedCategory, filterParam, sortBy]);
 
   // Clear all filters handler
   function handleClearAllFilters() {
+    setSearchQuery("");
+    setApiSearchResults(null);
     setSelectedCategory("all");
     setSortBy("recommended");
     setPage(1);
-    if (filterParam) {
+    if (filterParam || initialSearch) {
       router.push("/shop");
     }
   }
@@ -309,9 +391,9 @@ function ShopContent({
     }, 450);
   }
 
-  // Filtered raw product list
+  // Filtered product list (search + category + collection filters)
   const filtered = useMemo(() => {
-    let result = allProducts;
+    let result = searchedProducts;
 
     if (filterParam === "new") {
       result = result.filter(
@@ -336,7 +418,7 @@ function ShopContent({
     }
 
     return result;
-  }, [allProducts, selectedCategory, activeCategoryObj, filterParam]);
+  }, [searchedProducts, selectedCategory, activeCategoryObj, filterParam]);
 
   // Is price-sorted mode active (low to high or high to low)?
   const isPriceSorted = sortBy === "price_asc" || sortBy === "price_desc";
@@ -468,17 +550,51 @@ function ShopContent({
               </div>
             </div>
 
-            {/* Controls Bar */}
-            <div className="flex items-center gap-3">
+            {/* Controls Bar: Mobile filters + Compact Search next to Sort + Sort */}
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               {/* Mobile filter button */}
               <button
                 type="button"
-                className="md:hidden flex items-center gap-1.5 px-3.5 py-2 border border-zinc-200 rounded-xl text-xs sm:text-sm font-medium text-zinc-700 bg-white shadow-xs cursor-pointer"
+                className="md:hidden flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-700 bg-white shadow-xs cursor-pointer"
                 onClick={() => setMobileFiltersOpen(true)}
               >
                 <FaSlidersH className="text-xs" />
                 <span>Filters</span>
               </button>
+
+              {/* Compact Search Input right next to Sort */}
+              <div className="relative w-40 sm:w-56">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs pointer-events-none">
+                  {isSearchingApi ? (
+                    <span className="inline-block w-3 h-3 border-2 border-crimson border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <FaSearch />
+                  )}
+                </span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Search products..."
+                  className="w-full pl-8 pr-7 py-2 border border-zinc-200 rounded-xl text-xs sm:text-sm text-zinc-800 placeholder-zinc-400 bg-white focus:outline-none focus:border-crimson focus:ring-1 focus:ring-crimson shadow-xs transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setPage(1);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs p-1 cursor-pointer"
+                    aria-label="Clear search"
+                  >
+                    <IoClose />
+                  </button>
+                )}
+              </div>
 
               {/* Sort Dropdown */}
               <div className="relative">
@@ -544,6 +660,22 @@ function ShopContent({
               <div className="mb-6 p-3 bg-red-50/60 border border-red-100 rounded-2xl flex flex-wrap items-center justify-between gap-2.5">
                 <div className="flex items-center flex-wrap gap-2">
                   <span className="text-xs font-bold text-zinc-700">Active Filters:</span>
+                  {isSearchActive && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-red-200 text-xs text-crimson font-semibold shadow-2xs">
+                      Search: &quot;{searchQuery}&quot;
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setPage(1);
+                        }}
+                        className="hover:text-zinc-900 cursor-pointer"
+                        title="Remove search query"
+                      >
+                        <IoClose />
+                      </button>
+                    </span>
+                  )}
                   {selectedCategory !== "all" && activeCategoryObj && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-red-200 text-xs text-crimson font-semibold shadow-2xs">
                       Category: {activeCategoryObj.name}
@@ -622,19 +754,57 @@ function ShopContent({
                   subtext="Updating live prices and offers"
                 />
               </div>
-            ) : isPriceSorted ? (
-              /* Flat Price Sorted List (No Category Headings) */
+            ) : isPriceSorted || isSearchActive ? (
+              /* Flat Product List (No Category Headings) when price sorted or search is active */
               <div>
                 <div className="mb-4 flex items-center justify-between pb-2 border-b border-zinc-200">
                   <span className="text-xs font-semibold text-zinc-600">
-                    Showing all products sorted by price ({flatSortedProducts.length} items)
+                    {isSearchActive
+                      ? `Showing ${flatSortedProducts.length} fireworks matching "${searchQuery}"`
+                      : `Showing all products sorted by price (${flatSortedProducts.length} items)`}
                   </span>
-                  <span className="text-xs text-amber-600 font-semibold bg-amber-50 px-2.5 py-0.5 rounded-full">
-                    {sortBy === "price_asc" ? "⚡ Price: Low to High" : "⚡ Price: High to Low"}
-                  </span>
+                  {isSearchActive ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setPage(1);
+                      }}
+                      className="text-xs text-crimson font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <IoClose />
+                      <span>Clear Search</span>
+                    </button>
+                  ) : (
+                    <span className="text-xs text-amber-600 font-semibold bg-amber-50 px-2.5 py-0.5 rounded-full">
+                      {sortBy === "price_asc" ? "⚡ Price: Low to High" : "⚡ Price: High to Low"}
+                    </span>
+                  )}
                 </div>
 
-                <ProductGrid products={paginatedFlatProducts} cols={4} />
+                {flatSortedProducts.length > 0 ? (
+                  <ProductGrid products={paginatedFlatProducts} cols={4} />
+                ) : (
+                  <div className="text-center py-16 bg-white rounded-3xl border border-zinc-100 p-8 shadow-xs">
+                    <div className="w-16 h-16 bg-red-50 text-crimson rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                      <FaFire />
+                    </div>
+                    <p className="text-base font-bold text-zinc-900 mb-1">
+                      No fireworks found matching &quot;{searchQuery}&quot;
+                    </p>
+                    <p className="text-xs text-zinc-500 mb-5 max-w-md mx-auto">
+                      Try searching another name like flower pot, sparkler, chakkar, rocket, or bomb.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleClearAllFilters}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-crimson text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs hover:bg-[#991B1B] transition-colors cursor-pointer"
+                    >
+                      <IoClose />
+                      <span>Clear Search &amp; Filters</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Pagination for flat sorted products */}
                 {totalPages > 1 && (
@@ -719,10 +889,13 @@ function ShopContent({
 
                 {categoryGroups.length === 0 && (
                   <div className="text-center py-16 bg-white rounded-3xl border border-zinc-100 p-8 shadow-xs">
-                    <p className="text-base font-bold text-zinc-800 mb-1">
+                    <div className="w-16 h-16 bg-red-50 text-crimson rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                      <FaFire />
+                    </div>
+                    <p className="text-base font-bold text-zinc-900 mb-1">
                       No fireworks found matching your filters
                     </p>
-                    <p className="text-xs text-zinc-500 mb-5">
+                    <p className="text-xs text-zinc-500 mb-5 max-w-md mx-auto">
                       Try clearing your active filters to browse our full catalog.
                     </p>
                     <button
@@ -818,11 +991,13 @@ function ShopPageInner() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "all";
   const filterParam = searchParams.get("filter") || "";
+  const initialSearch = searchParams.get("search") || searchParams.get("q") || "";
 
   return (
     <ShopContent
       initialCategory={initialCategory}
       filterParam={filterParam}
+      initialSearch={initialSearch}
     />
   );
 }

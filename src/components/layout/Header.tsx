@@ -7,12 +7,20 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useFlyRocket } from "@/context/FlyRocketContext";
+import { useToast } from "@/context/ToastContext";
 import type { Product } from "@/lib/products";
 import { getProducts } from "@/services/product.service";
+import { getCategories } from "@/services/category.service";
 import { adaptApiProducts } from "@/utils/product.adapter";
 import { usePopularSearches } from "@/hooks/usePopularSearches";
-import { FaSearch, FaBars, FaDownload, FaFilePdf, FaFire } from "react-icons/fa";
-import { FaCartShopping, FaRegHeart } from "react-icons/fa6";
+import {
+  searchCategories,
+  searchProducts,
+  CategorySearchItem,
+  MatchedCategory,
+} from "@/utils/search.utils";
+import { FaSearch, FaBars, FaDownload, FaFilePdf, FaFire, FaArrowRight } from "react-icons/fa";
+import { FaCartShopping, FaRegHeart, FaPlus, FaMinus } from "react-icons/fa6";
 import { IoClose } from "react-icons/io5";
 
 const NAV_LINKS = [
@@ -122,9 +130,16 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const { count: cartCount } = useCart();
+  const {
+    count: cartCount,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    items: cartItems,
+  } = useCart();
   const { count: wishlistCount } = useWishlist();
-  const { isCartBouncing } = useFlyRocket();
+  const { isCartBouncing, triggerFlyRocket } = useFlyRocket();
+  const { showToast } = useToast();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -134,8 +149,38 @@ export function Header() {
   const displayCartCount = mounted ? cartCount : 0;
   const displayWishlistCount = mounted ? wishlistCount : 0;
 
+  // Catalog cache for instant 0ms search
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allCategories, setAllCategories] = useState<CategorySearchItem[]>([]);
+  const [matchedCategories, setMatchedCategories] = useState<MatchedCategory[]>([]);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const { categories: popularCategories, products: popularProducts } = usePopularSearches();
+
+  // Preload entire catalog into memory once for instant search
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([getProducts(), getCategories()]).then(([prodsRes, catsRes]) => {
+      if (!active) return;
+      if (prodsRes.status === "fulfilled" && Array.isArray(prodsRes.value)) {
+        setAllProducts(adaptApiProducts(prodsRes.value));
+      }
+      if (catsRes.status === "fulfilled" && Array.isArray(catsRes.value)) {
+        setAllCategories(
+          catsRes.value.map((c) => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug,
+            productCount: c.productCount ?? 0,
+            displayOrder: c.displayOrder ?? 999,
+          }))
+        );
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     setSearchOpen(false);
@@ -145,37 +190,59 @@ export function Header() {
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     const q = searchQuery.trim();
-    if (q.length >= 3) {
+    if (q) {
       setSearchOpen(false);
-      router.push(`/search?q=${encodeURIComponent(q)}`);
+      router.push(`/shop?search=${encodeURIComponent(q)}`);
     }
   }
 
+  // Instant client-side search (0ms) + background fallback
   useEffect(() => {
     const q = searchQuery.trim();
-    if (q.length < 3) {
+    if (!q) {
       setSearchResults([]);
+      setMatchedCategories([]);
       return;
     }
 
-    let active = true;
-    const timer = setTimeout(() => {
-      getProducts({ search: q })
-        .then((data) => {
-          if (active && data) {
-            setSearchResults(adaptApiProducts(data).slice(0, 6));
-          }
-        })
-        .catch(() => {
-          if (active) setSearchResults([]);
-        });
-    }, 250);
+    // 1. Instant fuzzy & token search across preloaded categories & products
+    const catsMatched = searchCategories(q, allCategories);
+    const prodsMatched = searchProducts(q, allProducts, catsMatched);
 
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [searchQuery]);
+    setMatchedCategories(catsMatched.slice(0, 4));
+    setSearchResults(prodsMatched.slice(0, 8));
+
+    // 2. Background fetch to supplement if remote database has newly added items
+    let active = true;
+    if (q.length >= 2) {
+      const timer = setTimeout(() => {
+        getProducts({ search: q })
+          .then((apiData) => {
+            if (active && Array.isArray(apiData) && apiData.length > 0) {
+              const adapted = adaptApiProducts(apiData);
+              setSearchResults((prev) => {
+                const seen = new Set(prev.map((p) => p.id || p.slug));
+                const merged = [...prev];
+                for (const item of adapted) {
+                  const key = item.id || item.slug;
+                  if (!seen.has(key)) {
+                    seen.add(key);
+                    merged.push(item);
+                  }
+                }
+                return merged.slice(0, 8);
+              });
+            }
+          })
+          .catch(() => {});
+      }, 300);
+
+      return () => {
+        active = false;
+        clearTimeout(timer);
+      };
+    }
+  }, [searchQuery, allProducts, allCategories]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -257,23 +324,19 @@ export function Header() {
                   />
 
                   {/* Responsive Search Dropdown */}
-                  <div className="fixed inset-x-3 top-18 sm:top-20 z-50 max-w-lg mx-auto sm:max-w-none sm:w-96 sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden animate-slide-down">
+                  <div className="fixed inset-x-3 top-18 sm:top-20 z-50 max-w-lg mx-auto sm:max-w-none sm:w-[460px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden animate-slide-down">
                     <form
                       onSubmit={handleSearchSubmit}
-                      className="flex items-center gap-2 px-4 py-3 border-b border-zinc-100"
+                      className="flex items-center gap-2 px-4 py-3 border-b border-zinc-100 bg-zinc-50/50"
                     >
                       <FaSearch className="text-zinc-400 text-sm shrink-0" />
                       <input
                         ref={searchRef}
                         type="text"
-                        placeholder="Search fireworks..."
+                        placeholder="Search fireworks, flower pots, sparklers..."
                         value={searchQuery}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSearchQuery(val);
-                          if (val.trim().length < 2) setSearchResults([]);
-                        }}
-                        className="flex-1 text-sm outline-none text-zinc-800 placeholder-zinc-400"
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-1 text-sm outline-none text-zinc-800 placeholder-zinc-400 bg-transparent"
                       />
                       {searchQuery && (
                         <button
@@ -281,6 +344,7 @@ export function Header() {
                           onClick={() => {
                             setSearchQuery("");
                             setSearchResults([]);
+                            setMatchedCategories([]);
                           }}
                           className="text-zinc-400 hover:text-zinc-600 text-sm cursor-pointer p-0.5"
                           aria-label="Clear query"
@@ -297,32 +361,199 @@ export function Header() {
                       </button>
                     </form>
 
-                    {searchResults.length > 0 ? (
-                      <div className="max-h-64 overflow-y-auto divide-y divide-zinc-50">
-                        {searchResults.map((p) => (
-                          <Link
-                            key={p.slug}
-                            href={`/product/${p.slug}`}
-                            onClick={() => setSearchOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 transition-colors"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-red-50 text-crimson flex items-center justify-center text-xs shrink-0">
-                              <FaFire />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-zinc-800 line-clamp-1">{p.name}</p>
-                              <p className="text-[10px] text-zinc-400">{p.category_name}</p>
-                            </div>
-                            <p className="text-xs font-bold text-crimson shrink-0">₹{p.price}</p>
-                          </Link>
-                        ))}
+                    {/* Matching Categories Pill Section */}
+                    {matchedCategories.length > 0 && (
+                      <div className="px-4 py-2.5 bg-red-50/40 border-b border-zinc-100">
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                          <span>📁 Matching Categories</span>
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {matchedCategories.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setSearchOpen(false);
+                                router.push(`/shop?category=${c.id}`);
+                              }}
+                              className="px-2.5 py-1 text-xs bg-white hover:bg-crimson text-crimson hover:text-white font-semibold rounded-lg transition-colors cursor-pointer border border-red-200 shadow-2xs flex items-center gap-1"
+                            >
+                              <span>{c.name}</span>
+                              {c.productCount > 0 && (
+                                <span className="text-[10px] opacity-75">({c.productCount})</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    ) : searchQuery.trim().length > 0 && searchQuery.trim().length < 3 ? (
-                      <p className="px-4 py-5 text-center text-xs text-amber-600 bg-amber-50/60 font-medium">
-                        ✨ Type at least 3 characters to search fireworks...
-                      </p>
-                    ) : searchQuery.trim().length >= 3 ? (
-                      <p className="px-4 py-6 text-center text-xs text-zinc-400">No results found</p>
+                    )}
+
+                    {/* Matching Products or Fallback Suggestions */}
+                    {searchResults.length > 0 ? (
+                      <div>
+                        <div className="max-h-72 overflow-y-auto divide-y divide-zinc-50">
+                          {searchResults.map((p) => {
+                            const cartItem = cartItems.find(
+                              (i) => (p.id && i.product.id === p.id) || i.product.slug === p.slug
+                            );
+                            const inCart = Boolean(cartItem);
+                            const cartQty = cartItem?.quantity ?? 0;
+
+                            return (
+                              <div
+                                key={p.slug}
+                                onClick={() => {
+                                  setSearchOpen(false);
+                                  router.push(`/product/${p.slug}`);
+                                }}
+                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 transition-colors cursor-pointer group"
+                              >
+                                {/* Thumbnail */}
+                                <div className="w-11 h-11 rounded-xl overflow-hidden bg-zinc-100 shrink-0 border border-zinc-200/60 relative flex items-center justify-center">
+                                  {p.images && p.images.length > 0 && p.images[0] ? (
+                                    <Image
+                                      src={p.images[0]}
+                                      alt={p.name}
+                                      fill
+                                      className="object-cover group-hover:scale-105 transition-transform"
+                                      sizes="44px"
+                                      unoptimized
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-red-50 text-crimson flex items-center justify-center text-xs">
+                                      <FaFire />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Title, Category & Price */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-zinc-900 group-hover:text-crimson line-clamp-1 transition-colors">
+                                    {p.name}
+                                  </p>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[10px] text-zinc-500 font-medium truncate">
+                                      {p.category_name}
+                                    </span>
+                                    {p.discount_percent > 0 && (
+                                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 rounded">
+                                        {p.discount_percent}% off
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-xs font-bold text-crimson">₹{p.price}</span>
+                                    {p.mrp > p.price && (
+                                      <span className="text-[10px] text-zinc-400 line-through">₹{p.mrp}</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Direct Add to Cart / Quantity Stepper */}
+                                <div
+                                  className="shrink-0 ml-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  {inCart ? (
+                                    <div className="flex items-center bg-red-50 border border-red-200 rounded-xl overflow-hidden p-0.5 shadow-2xs">
+                                      <button
+                                        type="button"
+                                        onClick={async (e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          if (cartQty <= 1) {
+                                            await removeFromCart(p.id || p.slug);
+                                            showToast(`Removed "${p.name}" from cart`, "cart");
+                                          } else {
+                                            await updateQuantity(p.id || p.slug, cartQty - 1);
+                                          }
+                                        }}
+                                        className="w-6 h-6 flex items-center justify-center text-crimson hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                                        aria-label="Decrease quantity"
+                                      >
+                                        <FaMinus className="text-[9px]" />
+                                      </button>
+                                      <span className="w-6 text-center text-xs font-bold text-zinc-900">
+                                        {cartQty}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={async (e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          triggerFlyRocket(e.currentTarget);
+                                          await updateQuantity(p.id || p.slug, cartQty + 1);
+                                        }}
+                                        className="w-6 h-6 flex items-center justify-center text-crimson hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                                        aria-label="Increase quantity"
+                                      >
+                                        <FaPlus className="text-[9px]" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={async (e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        triggerFlyRocket(e.currentTarget);
+                                        try {
+                                          await addToCart(p, 1);
+                                          showToast(`Added "${p.name}" to cart!`, "cart");
+                                        } catch {
+                                          showToast(`Failed to add "${p.name}"`, "error");
+                                        }
+                                      }}
+                                      className="px-2.5 py-1.5 bg-crimson hover:bg-[#991B1B] text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
+                                    >
+                                      <FaPlus className="text-[9px]" />
+                                      <span>Add</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* View all in Shop button */}
+                        <div className="p-2.5 border-t border-zinc-100 bg-zinc-50/70 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchOpen(false);
+                              router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+                            }}
+                            className="w-full py-1.5 text-xs font-bold text-crimson hover:text-[#991B1B] hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <span>View all matching fireworks in Catalog</span>
+                            <FaArrowRight className="text-[10px]" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : searchQuery.trim().length > 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <p className="text-xs text-zinc-500 font-medium mb-2">
+                          No matching fireworks found for &quot;<span className="text-zinc-800 font-bold">{searchQuery}</span>&quot;
+                        </p>
+                        <p className="text-[11px] text-zinc-400 mb-4">
+                          Try searching common names like pot, sparkler, chakkar, rocket, or bomb
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-1.5">
+                          {["Flower Pots", "Sparklers", "Chakkars", "Rockets", "Atom Bomb"].map((term) => (
+                            <button
+                              key={term}
+                              type="button"
+                              onClick={() => setSearchQuery(term)}
+                              className="px-2.5 py-1 text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium rounded-lg transition-colors cursor-pointer"
+                            >
+                              {term}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     ) : (
                       <div className="p-3 space-y-3">
                         {popularCategories.length > 0 && (
@@ -337,7 +568,7 @@ export function Header() {
                                   type="button"
                                   onClick={() => {
                                     setSearchQuery(c.name);
-                                    router.push(`/search?q=${encodeURIComponent(c.name)}`);
+                                    router.push(`/shop?category=${encodeURIComponent(c.id)}`);
                                     setSearchOpen(false);
                                   }}
                                   className="px-2.5 py-1 text-xs bg-red-50 text-red-700 font-semibold rounded-lg hover:bg-crimson hover:text-white transition-colors cursor-pointer border border-red-200"
@@ -361,7 +592,7 @@ export function Header() {
                                   type="button"
                                   onClick={() => {
                                     setSearchQuery(p.name);
-                                    router.push(`/search?q=${encodeURIComponent(p.name)}`);
+                                    router.push(`/product/${p.slug}`);
                                     setSearchOpen(false);
                                   }}
                                   className="px-2.5 py-1 text-xs bg-zinc-100 text-zinc-700 font-medium rounded-lg hover:bg-zinc-800 hover:text-white transition-colors cursor-pointer border border-zinc-200"

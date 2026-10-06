@@ -79,8 +79,8 @@ export async function getProducts(
   const s = params?.search?.trim() || "";
   const c = params?.category?.trim() || "";
 
-  // Product search requires minimum 3 characters to activate API call
-  if (params?.search !== undefined && s.length > 0 && s.length < 3) {
+  // Product search requires minimum 2 characters to activate API call
+  if (params?.search !== undefined && s.length > 0 && s.length < 2) {
     return [];
   }
 
