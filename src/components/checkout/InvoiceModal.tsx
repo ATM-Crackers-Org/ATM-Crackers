@@ -562,6 +562,7 @@ Email: ATMCRACKERS@GMAIL.COM`;
                       alt="ATM Crackers"
                       width={48}
                       height={48}
+                      style={{ width: "auto", height: "auto" }}
                       className="w-full h-full object-contain"
                     />
                   </div>

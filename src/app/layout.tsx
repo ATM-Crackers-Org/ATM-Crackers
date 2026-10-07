@@ -6,6 +6,8 @@ import { ToastProvider } from "@/context/ToastContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { FlyRocketProvider } from "@/context/FlyRocketContext";
 import { LegalNoticeModal } from "@/components/common/LegalNoticeModal";
+import { ScrollRestoration } from "@/components/common/ScrollRestoration";
+import { ScrollToTopButton } from "@/components/common/ScrollToTopButton";
 
 export const metadata: Metadata = {
   title: {
@@ -45,8 +47,10 @@ export default function RootLayout({
             <CartProvider>
               <WishlistProvider>
                 <FlyRocketProvider>
+                  <ScrollRestoration />
                   {children}
                   <LegalNoticeModal />
+                  <ScrollToTopButton />
                 </FlyRocketProvider>
               </WishlistProvider>
             </CartProvider>

@@ -284,6 +284,7 @@ export function Header() {
                   alt="ATM Crackers Sivakasi"
                   fill
                   priority
+                  loading="eager"
                   sizes="48px"
                   className="object-contain p-0.5"
                 />

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Product } from "@/lib/products";
 import { formatPrice } from "@/lib/products";
 import { ProductImage } from "@/components/ui/ProductImage";
+import { ProductImageGallery } from "@/components/product/ProductImageGallery";
 import { DiscountBadge } from "@/components/ui/Badge";
 import { StarRating } from "@/components/ui/StarRating";
 import { QuantitySelector } from "@/components/ui/QuantitySelector";
@@ -103,21 +104,23 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:bg-zinc-200 transition-colors cursor-pointer text-lg"
+          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/90 shadow-md flex items-center justify-center text-zinc-600 hover:bg-white hover:text-crimson transition-all cursor-pointer text-lg border border-zinc-200/60"
           aria-label="Close"
         >
           <IoClose />
         </button>
 
-        {/* Image */}
-        <div className="rounded-t-3xl overflow-hidden">
-          <ProductImage
+        {/* Image Gallery with Auto-carousel (3s) */}
+        <div className="p-4 bg-zinc-50/60 rounded-t-3xl">
+          <ProductImageGallery
+            images={product.images}
             productName={product.name}
             categoryName={product.category_name}
             sku={product.sku}
-            aspectRatio="4/3"
-            size="detail"
-            imageUrl={product.images?.[0]}
+            discountPercent={product.discount_percent}
+            isNewArrival={product.is_new_arrival}
+            isTrending={product.is_trending}
+            isBestSeller={product.is_best_seller}
           />
         </div>
 
@@ -217,6 +220,7 @@ export function QuickViewModal({ product, onClose }: QuickViewModalProps) {
 
           <Link
             href={`/product/${product.slug}`}
+            prefetch={false}
             className="flex items-center justify-center gap-2 text-center text-sm text-crimson font-semibold hover:underline"
           >
             <span>View Full Details</span>

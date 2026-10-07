@@ -27,7 +27,12 @@ export function ProductImage({
       ? "h-64 sm:h-80 md:h-96"
       : size === "thumb"
       ? "h-16 w-16"
-      : "h-36 sm:h-44";
+      : "aspect-square w-full";
+
+  const fitClass =
+    size === "card" || size === "detail"
+      ? "object-contain p-3 sm:p-4"
+      : "object-cover";
 
   const hasValidImage = Boolean(
     imageUrl && !imgError && !imageUrl.includes("placehold.co")
@@ -36,14 +41,14 @@ export function ProductImage({
   if (hasValidImage && imageUrl) {
     return (
       <div
-        className={`relative w-full ${heightClass} rounded-inherit overflow-hidden flex items-center justify-center bg-zinc-50 ${className}`}
+        className={`relative w-full ${heightClass} rounded-inherit overflow-hidden flex items-center justify-center bg-zinc-50/70 ${className}`}
       >
         <Image
           src={imageUrl}
           alt={productName}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          className={`${fitClass} transition-transform duration-300 group-hover:scale-105 select-none`}
           onError={() => setImgError(true)}
           unoptimized
         />
@@ -54,14 +59,15 @@ export function ProductImage({
   // Fallback: Show official ATM Crackers logo
   return (
     <div
-      className={`relative w-full ${heightClass} rounded-inherit overflow-hidden flex flex-col items-center justify-center bg-zinc-950 p-3 select-none ${className}`}
+      className={`relative w-full ${heightClass} rounded-inherit overflow-hidden flex flex-col items-center justify-center bg-zinc-950 p-4 select-none ${className}`}
     >
       <Image
         src="/images/logo.png"
         alt={productName || "ATM Crackers"}
-        width={160}
-        height={160}
-        className="max-w-full max-h-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
+        width={140}
+        height={140}
+        style={{ width: "auto", height: "auto" }}
+        className="max-w-[70%] max-h-[70%] object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
       />
     </div>
   );
@@ -82,14 +88,14 @@ export function CategoryImage({
   if (imageUrl && !imgError && !imageUrl.includes("placehold.co")) {
     return (
       <div
-        className={`relative w-full h-28 sm:h-32 overflow-hidden flex items-center justify-center bg-zinc-50 ${className}`}
+        className={`relative w-full aspect-[4/3] overflow-hidden flex items-center justify-center bg-zinc-50/70 p-2.5 ${className}`}
       >
         <Image
           src={imageUrl}
           alt={categoryName}
           fill
           sizes="(max-width: 768px) 50vw, 25vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          className="object-contain p-2 transition-transform duration-300 group-hover:scale-105 select-none"
           onError={() => setImgError(true)}
           unoptimized
         />
@@ -100,14 +106,15 @@ export function CategoryImage({
   // Fallback: Show official ATM Crackers logo
   return (
     <div
-      className={`relative w-full h-28 sm:h-32 overflow-hidden flex items-center justify-center bg-zinc-950 p-2.5 ${className}`}
+      className={`relative w-full aspect-[4/3] overflow-hidden flex items-center justify-center bg-zinc-950 p-3 ${className}`}
     >
       <Image
         src="/images/logo.png"
         alt={categoryName || "ATM Crackers"}
-        width={120}
-        height={120}
-        className="max-w-full max-h-full object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
+        width={100}
+        height={100}
+        style={{ width: "auto", height: "auto" }}
+        className="max-w-[70%] max-h-[70%] object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
       />
     </div>
   );

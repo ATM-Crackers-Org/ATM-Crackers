@@ -77,6 +77,7 @@ export function CategoriesPageContent() {
               <Link
                 key={cat.id}
                 href={`/categories/${cat.slug}`}
+                prefetch={false}
                 className="group block bg-white rounded-2xl overflow-hidden border border-zinc-100 product-card shadow-[0_1px_4px_rgba(0,0,0,0.05)]"
               >
                 <div className="overflow-hidden">

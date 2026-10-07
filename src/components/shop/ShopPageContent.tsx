@@ -79,6 +79,7 @@ function FilterContent({
               onClick={() => {
                 setSelectedCategory("all");
                 setPage(1);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               className="text-[11px] text-crimson font-semibold hover:underline cursor-pointer flex items-center gap-0.5"
             >
@@ -117,6 +118,7 @@ function FilterContent({
             onClick={() => {
               setSelectedCategory("all");
               setPage(1);
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
               selectedCategory === "all"
@@ -153,6 +155,7 @@ function FilterContent({
                 onClick={() => {
                   setSelectedCategory(cat.slug || cat.id);
                   setPage(1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
                   isSelected
@@ -237,6 +240,7 @@ function ShopContent({
     } catch {
       // ignore
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // Sync search query if URL initialSearch changes
@@ -401,6 +405,7 @@ function ShopContent({
     if (filterParam || initialSearch) {
       router.push("/shop");
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // Handle Sort Change with brief cracker loader transition
@@ -409,9 +414,16 @@ function ShopContent({
     setIsSorting(true);
     setSortBy(newSort);
     setPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => {
       setIsSorting(false);
     }, 450);
+  }
+
+  function handleCategorySelect(cat: string) {
+    setSelectedCategory(cat);
+    setPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // Filtered product list (search + category + collection filters)
@@ -516,7 +528,7 @@ function ShopContent({
   );
 
   return (
-    <main className="min-h-screen bg-warm-white">
+    <main className="min-h-screen bg-warm-white pb-32 md:pb-20">
       {/* Page header */}
       <div className="bg-white border-b border-zinc-200">
         <div className="max-w-360 mx-auto px-4 md:px-6 lg:px-8 py-6">
@@ -695,7 +707,7 @@ function ShopContent({
               </div>
               <FilterContent
                 selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
+                setSelectedCategory={handleCategorySelect}
                 categories={categories}
                 allProductsCount={allProducts.length}
                 categoryCounts={categoryCounts}
@@ -868,7 +880,10 @@ function ShopContent({
                   <div className="flex items-center justify-center gap-2 mt-8">
                     <button
                       type="button"
-                      onClick={() => setPage(Math.max(1, page - 1))}
+                      onClick={() => {
+                        setPage(Math.max(1, page - 1));
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
                       disabled={page === 1}
                       className="px-4 py-2 rounded-xl border border-zinc-200 text-sm text-zinc-600 hover:border-crimson hover:text-crimson disabled:opacity-40 transition-colors cursor-pointer"
                     >
@@ -880,7 +895,10 @@ function ShopContent({
                         <button
                           key={p}
                           type="button"
-                          onClick={() => setPage(p)}
+                          onClick={() => {
+                            setPage(p);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
                           className={`w-9 h-9 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
                             page === p
                               ? "bg-crimson text-white shadow-xs"
@@ -893,7 +911,10 @@ function ShopContent({
                     })}
                     <button
                       type="button"
-                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                      onClick={() => {
+                        setPage(Math.min(totalPages, page + 1));
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
                       disabled={page === totalPages}
                       className="px-4 py-2 rounded-xl border border-zinc-200 text-sm text-zinc-600 hover:border-crimson hover:text-crimson disabled:opacity-40 transition-colors cursor-pointer"
                     >
@@ -912,17 +933,14 @@ function ShopContent({
                 />
               </div>
             ) : (
-              /* Grouped by Category in order of category.displayOrder (Grid Mode) */
               <div className="space-y-10">
                 {categoryGroups.map((group) => (
                   <section
                     key={group.categoryId || group.categorySlug}
                     id={`category-section-${group.categoryId || group.categorySlug}`}
                   >
-                    {/* Highlighted Category Banner Header */}
-                    <div className="relative mb-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-red-950 via-zinc-900 to-red-900 text-white shadow-md border-l-4 border-amber-400 flex flex-col sm:flex-row sm:items-center justify-between gap-3 overflow-hidden">
-                      {/* Decorative background glow & sparks */}
-                      <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-amber-500/10 to-transparent pointer-events-none" />
+                    <div className="relative mb-5 p-4 sm:p-5 rounded-2xl bg-linear-to-r from-red-950 via-zinc-900 to-red-900 text-white shadow-md border-l-4 border-amber-400 flex flex-col sm:flex-row sm:items-center justify-between gap-3 overflow-hidden">
+                      <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-linear-to-l from-amber-500/10 to-transparent pointer-events-none" />
 
                       <div className="relative z-10 flex items-center gap-3">
                         <span className="w-9 h-9 rounded-xl bg-amber-400/20 text-amber-300 font-bold text-xs flex items-center justify-center border border-amber-400/40 shrink-0 shadow-inner">
@@ -941,6 +959,7 @@ function ShopContent({
 
                       <Link
                         href={`/categories/${group.categorySlug}`}
+                        prefetch={false}
                         className="relative z-10 self-start sm:self-auto text-xs font-bold text-amber-300 hover:text-white inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-amber-300/20"
                       >
                         <span>Explore Category</span>
@@ -948,7 +967,6 @@ function ShopContent({
                       </Link>
                     </div>
 
-                    {/* Products Grid for this category */}
                     <ProductGrid products={group.products} cols={4} />
                   </section>
                 ))}
@@ -980,21 +998,23 @@ function ShopContent({
         </div>
       </div>
 
-      {/* Mobile filter drawer */}
       {mobileFiltersOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-70 md:hidden">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileFiltersOpen(false)}
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto animate-slide-up shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-slide-up">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-zinc-100 shrink-0 bg-white">
               <h2 className="text-base font-bold text-zinc-900">Filters</h2>
               <div className="flex items-center gap-3">
                 {hasActiveFilter && (
                   <button
                     type="button"
-                    onClick={handleClearAllFilters}
+                    onClick={() => {
+                      handleClearAllFilters();
+                      setMobileFiltersOpen(false);
+                    }}
                     className="text-xs font-bold text-crimson hover:underline cursor-pointer"
                   >
                     Clear All
@@ -1003,29 +1023,42 @@ function ShopContent({
                 <button
                   type="button"
                   onClick={() => setMobileFiltersOpen(false)}
-                  className="text-zinc-400 hover:text-zinc-700 text-xl font-bold cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 flex items-center justify-center text-lg font-bold cursor-pointer transition-colors"
+                  aria-label="Close filters"
                 >
                   <IoClose />
                 </button>
               </div>
             </div>
-            <FilterContent
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-              categories={categories}
-              allProductsCount={allProducts.length}
-              categoryCounts={categoryCounts}
-              setPage={setPage}
-              hasActiveFilter={hasActiveFilter}
-              onClearAllFilters={handleClearAllFilters}
-            />
-            <button
-              type="button"
-              onClick={() => setMobileFiltersOpen(false)}
-              className="w-full mt-6 py-3.5 bg-crimson text-white font-bold rounded-2xl shadow-md hover:bg-[#991B1B] transition-colors cursor-pointer"
-            >
-              Apply Filters ({filtered.length} Products)
-            </button>
+
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 overscroll-contain">
+              <FilterContent
+                selectedCategory={selectedCategory}
+                setSelectedCategory={handleCategorySelect}
+                categories={categories}
+                allProductsCount={allProducts.length}
+                categoryCounts={categoryCounts}
+                setPage={setPage}
+                hasActiveFilter={hasActiveFilter}
+                onClearAllFilters={handleClearAllFilters}
+              />
+            </div>
+
+            <div className="p-4 bg-white border-t border-zinc-100 shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-safe">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileFiltersOpen(false);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className="w-full py-3.5 bg-crimson text-white font-bold rounded-2xl shadow-md hover:bg-[#991B1B] transition-colors cursor-pointer text-sm flex items-center justify-center gap-2"
+              >
+                <span>Apply Filters</span>
+                <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                  ({filtered.length} {filtered.length === 1 ? "Product" : "Products"})
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

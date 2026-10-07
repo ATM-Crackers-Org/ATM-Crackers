@@ -93,17 +93,60 @@ export const ProductCard = React.memo(function ProductCard({
     }
   }
 
+  // Multi-image hover auto carousel
+  const validImages = React.useMemo(() => {
+    return (product.images || []).filter(
+      (img) => Boolean(img) && !img.includes("placehold.co")
+    );
+  }, [product.images]);
+
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isHovered || validImages.length <= 1) {
+      setCurrentImageIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % validImages.length);
+    }, 1400); // cycle image every 1.4s while mouse is hovering
+
+    return () => clearInterval(interval);
+  }, [isHovered, validImages.length]);
+
   return (
-    <div className="product-card group relative flex flex-col bg-white rounded-2xl overflow-hidden border border-zinc-100 shadow-sm transition-all duration-200">
-      <Link href={`/product/${product.slug}`} className="block relative overflow-hidden">
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="product-card group relative flex flex-col bg-white rounded-2xl overflow-hidden border border-zinc-100 shadow-sm transition-all duration-200"
+    >
+      <Link href={`/product/${product.slug}`} prefetch={false} className="block relative overflow-hidden">
         <ProductImage
           productName={product.name}
           categoryName={product.category_name}
           sku={product.sku}
           size="card"
-          imageUrl={product.images?.[0]}
+          imageUrl={validImages[currentImageIndex] || product.images?.[0]}
           className="transition-transform duration-300 group-hover:scale-105"
         />
+
+        {/* Hover image indicator dots (only if product has multiple images) */}
+        {validImages.length > 1 && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-xs px-2 py-0.5 rounded-full pointer-events-none">
+            {validImages.map((_, i) => (
+              <span
+                key={i}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  i === currentImageIndex
+                    ? "w-3 bg-amber-400"
+                    : "w-1 bg-white/70"
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
           <DiscountBadge percent={product.discount_percent} />
@@ -151,7 +194,7 @@ export const ProductCard = React.memo(function ProductCard({
           </p>
 
           {/* Name */}
-          <Link href={`/product/${product.slug}`}>
+          <Link href={`/product/${product.slug}`} prefetch={false}>
             <h3 className="text-xs sm:text-sm font-semibold text-zinc-900 line-clamp-1 hover:text-crimson transition-colors leading-snug mb-1">
               {product.name}
             </h3>

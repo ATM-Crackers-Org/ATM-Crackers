@@ -66,6 +66,7 @@ export function CategoryGrid() {
               <Link
                 key={cat.id}
                 href={`/categories/${cat.slug}`}
+                prefetch={false}
                 className="category-card group block bg-white rounded-2xl overflow-hidden border border-zinc-100 shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Compact Image */}

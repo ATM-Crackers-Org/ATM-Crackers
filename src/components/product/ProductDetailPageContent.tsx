@@ -8,6 +8,7 @@ import { adaptApiProduct, adaptApiProducts } from "@/utils/product.adapter";
 import { formatPrice } from "@/lib/products";
 import type { Product } from "@/lib/products";
 import { ProductImage } from "@/components/ui/ProductImage";
+import { ProductImageGallery } from "@/components/product/ProductImageGallery";
 import { DiscountBadge, Badge } from "@/components/ui/Badge";
 import { StarRating } from "@/components/ui/StarRating";
 import { QuantitySelector } from "@/components/ui/QuantitySelector";
@@ -219,15 +220,17 @@ export function ProductDetailPageContent({ slug }: ProductDetailPageContentProps
 
           {/* Product section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            {/* Image */}
-            <div className="bg-white rounded-3xl overflow-hidden border border-zinc-100 shadow-sm">
-              <ProductImage
+            {/* Image Gallery with Auto-carousel (3s) */}
+            <div className="w-full">
+              <ProductImageGallery
+                images={product.images}
                 productName={product.name}
                 categoryName={product.category_name}
                 sku={product.sku}
-                aspectRatio="1/1"
-                size="detail"
-                imageUrl={product.images?.[0]}
+                discountPercent={product.discount_percent}
+                isNewArrival={product.is_new_arrival}
+                isTrending={product.is_trending}
+                isBestSeller={product.is_best_seller}
               />
             </div>
 
