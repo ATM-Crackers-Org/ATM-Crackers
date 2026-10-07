@@ -9,8 +9,9 @@ import { adaptApiProducts } from "@/utils/product.adapter";
 import { searchCategories, searchProducts } from "@/utils/search.utils";
 import type { Product } from "@/lib/products";
 import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductTableView } from "@/components/shop/ProductTableView";
 import { CrackersLoader } from "@/components/ui/CrackersLoader";
-import { FaSearch, FaSlidersH, FaFire } from "react-icons/fa";
+import { FaSearch, FaSlidersH, FaFire, FaThLarge, FaListUl } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 
 type SortOption = "recommended" | "price_asc" | "price_desc" | "rating" | "newest";
@@ -211,10 +212,32 @@ function ShopContent({
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSorting, setIsSorting] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const PER_PAGE = 24;
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+  // Load saved view mode preference
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("atm_shop_view_mode");
+      if (saved === "table" || saved === "grid") {
+        setViewMode(saved);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  function handleViewModeChange(mode: "grid" | "table") {
+    setViewMode(mode);
+    try {
+      localStorage.setItem("atm_shop_view_mode", mode);
+    } catch {
+      // ignore
+    }
+  }
 
   // Sync search query if URL initialSearch changes
   useEffect(() => {
@@ -615,6 +638,36 @@ function ShopContent({
                   </svg>
                 </div>
               </div>
+
+              {/* View Mode Toggle (Grid vs Quick Order / Table) */}
+              <div className="flex items-center bg-zinc-100 p-0.5 rounded-xl border border-zinc-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => handleViewModeChange("grid")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === "grid"
+                      ? "bg-white text-crimson shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                  title="Grid View (Cards)"
+                >
+                  <FaThLarge className="text-xs" />
+                  <span className="hidden sm:inline">Grid</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleViewModeChange("table")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === "table"
+                      ? "bg-white text-crimson shadow-xs"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                  title="Quick Order Price List (Table View)"
+                >
+                  <FaListUl className="text-xs" />
+                  <span className="hidden sm:inline">Quick Order</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -783,7 +836,11 @@ function ShopContent({
                 </div>
 
                 {flatSortedProducts.length > 0 ? (
-                  <ProductGrid products={paginatedFlatProducts} cols={4} />
+                  viewMode === "grid" ? (
+                    <ProductGrid products={paginatedFlatProducts} cols={4} />
+                  ) : (
+                    <ProductTableView products={paginatedFlatProducts} isGrouped={false} />
+                  )
                 ) : (
                   <div className="text-center py-16 bg-white rounded-3xl border border-zinc-100 p-8 shadow-xs">
                     <div className="w-16 h-16 bg-red-50 text-crimson rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
@@ -845,8 +902,17 @@ function ShopContent({
                   </div>
                 )}
               </div>
+            ) : viewMode === "table" ? (
+              /* Quick Order Price List Table View for all category groups */
+              <div className="space-y-6">
+                <ProductTableView
+                  products={[]}
+                  categoryGroups={categoryGroups}
+                  isGrouped={true}
+                />
+              </div>
             ) : (
-              /* Grouped by Category in order of category.displayOrder */
+              /* Grouped by Category in order of category.displayOrder (Grid Mode) */
               <div className="space-y-10">
                 {categoryGroups.map((group) => (
                   <section

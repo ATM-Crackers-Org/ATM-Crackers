@@ -64,13 +64,35 @@ export function adaptApiCartItem(item: ApiCartItem): CartItem {
   };
 }
 
+export function computeCartSummary(items: CartItem[]): CartSummary {
+  const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
+  const grandTotal = items.reduce(
+    (sum, i) => sum + (i.itemTotal ?? i.product.price * i.quantity),
+    0
+  );
+  const subtotal = items.reduce(
+    (sum, i) => sum + (i.product.mrp || i.product.price) * i.quantity,
+    0
+  );
+  return {
+    totalItems,
+    subtotal,
+    totalDiscount: Math.max(0, subtotal - grandTotal),
+    grandTotal,
+  };
+}
+
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
 function persistCartLocally(items: CartItem[]) {
   if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // ignore
-    }
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      } catch {
+        // ignore
+      }
+    }, 250);
   }
 }
 
@@ -133,27 +155,19 @@ export const addToCartThunk = createAsyncThunk(
     { product, quantity = 1 }: { product: Product; quantity?: number },
     { dispatch, rejectWithValue }
   ) => {
-    // 1. Optimistic update
+    // 1. Optimistic update (0ms UI latency)
     dispatch(cartSlice.actions.optimisticAdd({ product, quantity }));
 
-    // 2. Server sync
+    // 2. Server sync without blocking or refetching whole cart
     try {
       const productId = product.id;
       if (!productId) {
         throw new Error(`Product "${product.name}" has no ID`);
       }
       await addProductToCart({ productId, quantity });
-      // Refresh totals from server
-      const data = await getCart();
-      if (data && Array.isArray(data.items)) {
-        return {
-          items: data.items.map(adaptApiCartItem),
-          summary: data.summary || null,
-        };
-      }
-      return null;
+      return { productId, quantity };
     } catch (err: unknown) {
-      // Refetch from server to rollback accurately
+      // Refetch from server to rollback accurately on failure
       dispatch(fetchCart());
       return rejectWithValue(
         (err as { message?: string })?.message || "Failed to add to cart"
@@ -174,7 +188,7 @@ export const updateQuantityThunk = createAsyncThunk(
     },
     { dispatch, rejectWithValue }
   ) => {
-    // 1. Optimistic update
+    // 1. Optimistic update (0ms UI latency)
     dispatch(cartSlice.actions.optimisticUpdateQuantity({ productId, quantity }));
 
     // 2. Server sync
@@ -184,14 +198,7 @@ export const updateQuantityThunk = createAsyncThunk(
       } else {
         await apiUpdateQuantity(productId, quantity);
       }
-      const data = await getCart();
-      if (data && Array.isArray(data.items)) {
-        return {
-          items: data.items.map(adaptApiCartItem),
-          summary: data.summary || null,
-        };
-      }
-      return null;
+      return { productId, quantity };
     } catch (err: unknown) {
       dispatch(fetchCart());
       return rejectWithValue(
@@ -210,14 +217,7 @@ export const removeFromCartThunk = createAsyncThunk(
     // 2. Server sync
     try {
       await apiRemoveItem(productId);
-      const data = await getCart();
-      if (data && Array.isArray(data.items)) {
-        return {
-          items: data.items.map(adaptApiCartItem),
-          summary: data.summary || null,
-        };
-      }
-      return null;
+      return { productId };
     } catch (err: unknown) {
       dispatch(fetchCart());
       return rejectWithValue(
@@ -277,6 +277,7 @@ export const cartSlice = createSlice({
           itemTotal: product.price * quantity,
         });
       }
+      state.summary = computeCartSummary(state.items);
       persistCartLocally(state.items);
     },
     optimisticUpdateQuantity: (
@@ -297,6 +298,7 @@ export const cartSlice = createSlice({
           item.itemTotal = quantity * item.product.price;
         }
       }
+      state.summary = computeCartSummary(state.items);
       persistCartLocally(state.items);
     },
     optimisticRemove: (state, action: PayloadAction<string>) => {
@@ -304,6 +306,7 @@ export const cartSlice = createSlice({
       state.items = state.items.filter(
         (i) => i.product.id !== identifier && i.product.slug !== identifier
       );
+      state.summary = computeCartSummary(state.items);
       persistCartLocally(state.items);
     },
     optimisticClear: (state) => {
@@ -337,30 +340,18 @@ export const cartSlice = createSlice({
       });
 
     // addToCartThunk
-    builder.addCase(addToCartThunk.fulfilled, (state, action) => {
-      if (action.payload) {
-        state.items = action.payload.items;
-        state.summary = action.payload.summary;
-        persistCartLocally(action.payload.items);
-      }
+    builder.addCase(addToCartThunk.rejected, (state, action) => {
+      state.error = (action.payload as string) || "Failed to add to cart";
     });
 
     // updateQuantityThunk
-    builder.addCase(updateQuantityThunk.fulfilled, (state, action) => {
-      if (action.payload) {
-        state.items = action.payload.items;
-        state.summary = action.payload.summary;
-        persistCartLocally(action.payload.items);
-      }
+    builder.addCase(updateQuantityThunk.rejected, (state, action) => {
+      state.error = (action.payload as string) || "Failed to update quantity";
     });
 
     // removeFromCartThunk
-    builder.addCase(removeFromCartThunk.fulfilled, (state, action) => {
-      if (action.payload) {
-        state.items = action.payload.items;
-        state.summary = action.payload.summary;
-        persistCartLocally(action.payload.items);
-      }
+    builder.addCase(removeFromCartThunk.rejected, (state, action) => {
+      state.error = (action.payload as string) || "Failed to remove item";
     });
 
     // clearCartThunk

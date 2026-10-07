@@ -5,6 +5,7 @@ import React, {
   useContext,
   useCallback,
   useRef,
+  useEffect,
 } from "react";
 import type { Product } from "@/lib/products";
 import type { CartSummary } from "@/types/cart";
@@ -13,16 +14,19 @@ import {
   CartItem,
   adaptApiCartItem,
   fetchCart,
-  addToCartThunk,
-  updateQuantityThunk,
-  removeFromCartThunk,
   clearCartThunk,
+  cartSlice,
   selectCartItems,
   selectCartSummary,
   selectCartIsLoading,
   selectCartTotal,
   selectCartCount,
 } from "@/store/slices/cartSlice";
+import {
+  addProductToCart,
+  updateCartItemQuantity as apiUpdateQuantity,
+  removeCartItem as apiRemoveItem,
+} from "@/services/cart.service";
 
 export type { CartItem };
 export { adaptApiCartItem };
@@ -53,7 +57,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const count = useAppSelector(selectCartCount);
 
   const itemsRef = useRef<CartItem[]>(items);
-  itemsRef.current = items;
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   // Debounce timers for quantity updates to eliminate rapid-fire API spam
   const quantityDebounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -75,7 +81,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = useCallback(
     async (product: Product, quantity = 1): Promise<void> => {
-      await dispatch(addToCartThunk({ product, quantity })).unwrap();
+      // 1. Instant optimistic update (0ms UI latency)
+      dispatch(cartSlice.actions.optimisticAdd({ product, quantity }));
+
+      // 2. Background server sync
+      try {
+        const productId = product.id;
+        if (productId) {
+          await addProductToCart({ productId, quantity });
+        }
+      } catch (err) {
+        console.warn("Background add to cart sync failed, refetching:", err);
+        dispatch(fetchCart());
+      }
     },
     [dispatch]
   );
@@ -90,7 +108,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         quantityDebounceTimers.current.delete(productId);
       }
 
-      await dispatch(removeFromCartThunk(productId)).unwrap();
+      // 1. Instant optimistic removal
+      dispatch(cartSlice.actions.optimisticRemove(productId));
+
+      // 2. Background server sync
+      try {
+        await apiRemoveItem(productId);
+      } catch (err) {
+        console.warn("Background remove sync failed, refetching:", err);
+        dispatch(fetchCart());
+      }
     },
     [dispatch, resolveProductId]
   );
@@ -104,26 +131,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      return new Promise<void>((resolve, reject) => {
-        const existingTimer = quantityDebounceTimers.current.get(productId);
-        if (existingTimer) {
-          clearTimeout(existingTimer);
+      // 1. Instant optimistic update (0ms UI latency!)
+      dispatch(cartSlice.actions.optimisticUpdateQuantity({ productId, quantity }));
+
+      // 2. Debounce background API sync per product
+      const existingTimer = quantityDebounceTimers.current.get(productId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      const newTimer = setTimeout(async () => {
+        quantityDebounceTimers.current.delete(productId);
+        try {
+          await apiUpdateQuantity(productId, quantity);
+        } catch (err) {
+          console.warn("Background quantity sync failed, refetching cart:", err);
+          dispatch(fetchCart());
         }
+      }, 350);
 
-        const newTimer = setTimeout(async () => {
-          quantityDebounceTimers.current.delete(productId);
-          try {
-            await dispatch(
-              updateQuantityThunk({ productId, quantity })
-            ).unwrap();
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        }, 250);
-
-        quantityDebounceTimers.current.set(productId, newTimer);
-      });
+      quantityDebounceTimers.current.set(productId, newTimer);
     },
     [dispatch, resolveProductId, removeFromCart]
   );

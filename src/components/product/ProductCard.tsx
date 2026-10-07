@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { ProductImage } from "@/components/ui/ProductImage";
 import { DiscountBadge, Badge } from "@/components/ui/Badge";
@@ -11,6 +11,8 @@ import { useToast } from "@/context/ToastContext";
 import { useFlyRocket } from "@/context/FlyRocketContext";
 import { formatPrice } from "@/lib/products";
 import type { Product } from "@/lib/products";
+import { useAppSelector } from "@/store/hooks";
+import { selectItemQuantity } from "@/store/slices/cartSlice";
 import { FaHeart, FaEye } from "react-icons/fa";
 import { FaRegHeart, FaPlus, FaMinus } from "react-icons/fa6";
 
@@ -19,79 +21,57 @@ interface ProductCardProps {
   onQuickView?: (product: Product) => void;
 }
 
-export function ProductCard({ product, onQuickView }: ProductCardProps) {
-  const [actionType, setActionType] = useState<"add" | "inc" | "dec" | null>(null);
-  const { addToCart, updateQuantity, removeFromCart, items } = useCart();
+export const ProductCard = React.memo(function ProductCard({
+  product,
+  onQuickView,
+}: ProductCardProps) {
+  const { addToCart, updateQuantity, removeFromCart } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const { showToast } = useToast();
   const { triggerFlyRocket } = useFlyRocket();
 
   const wishlisted = isWishlisted(product.slug);
-  const cartItem = items.find(
-    (i) =>
-      (product.id && i.product.id === product.id) ||
-      i.product.slug === product.slug
-  );
-  const inCart = Boolean(cartItem);
-  const cartQty = cartItem?.quantity ?? 0;
+  const cartQty = useAppSelector(selectItemQuantity(product.id || product.slug));
+  const inCart = cartQty > 0;
 
-  async function handleInitialAdd(e: React.MouseEvent) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [tempQty, setTempQty] = React.useState("");
+
+  function handleInitialAdd(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (actionType) return;
 
     // Launch festive rocket to cart
     if (e.currentTarget) {
       triggerFlyRocket(e.currentTarget as HTMLElement);
     }
 
-    setActionType("add");
-    try {
-      await addToCart(product, 1);
-      showToast(`Added "${product.name}" to cart!`, "cart");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to add to cart";
-      showToast(msg, "error");
-    } finally {
-      setActionType(null);
-    }
+    addToCart(product, 1);
+    showToast(`Added "${product.name}" to cart!`, "cart");
+
+    // Immediately focus and select quantity input right after first adding
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 60);
   }
 
-  async function handleIncrement(e: React.MouseEvent) {
+  function handleIncrement(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (actionType) return;
-
-    setActionType("inc");
-    try {
-      await updateQuantity(product.id || product.slug, cartQty + 1);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update quantity";
-      showToast(msg, "error");
-    } finally {
-      setActionType(null);
-    }
+    updateQuantity(product.id || product.slug, cartQty + 1);
   }
 
-  async function handleDecrement(e: React.MouseEvent) {
+  function handleDecrement(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (actionType) return;
-
-    setActionType("dec");
-    try {
-      const nextQty = cartQty - 1;
-      if (nextQty <= 0) {
-        await removeFromCart(product.id || product.slug);
-        showToast(`Removed "${product.name}" from cart`, "cart");
-      } else {
-        await updateQuantity(product.id || product.slug, nextQty);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update quantity";
-      showToast(msg, "error");
-    } finally {
-      setActionType(null);
+    const nextQty = cartQty - 1;
+    if (nextQty <= 0) {
+      removeFromCart(product.id || product.slug);
+      showToast(`Removed "${product.name}" from cart`, "cart");
+    } else {
+      updateQuantity(product.id || product.slug, nextQty);
     }
   }
 
@@ -141,6 +121,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         {/* Wishlist toggle */}
         <button
           onClick={handleWishlist}
+          type="button"
           className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-sm z-10 transition-all cursor-pointer ${wishlisted
               ? "bg-pink-500 text-white"
               : "bg-white/90 text-zinc-400 hover:text-pink-500 hover:bg-white"
@@ -153,6 +134,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         {/* Quick View Button on Hover */}
         <button
           onClick={handleQuickView}
+          type="button"
           className="absolute bottom-2 right-2 bg-white/95 text-zinc-800 text-[10px] font-bold px-2 py-1 rounded-lg shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-white cursor-pointer inline-flex items-center gap-1"
         >
           <FaEye className="text-[10px]" />
@@ -202,55 +184,71 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
           {!inCart ? (
             <button
               onClick={handleInitialAdd}
-              disabled={actionType !== null}
-              className="w-full h-9 px-3 text-xs sm:text-sm font-bold rounded-xl bg-crimson text-white hover:bg-[#991B1B] active:scale-[0.98] shadow-sm transition-all cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              type="button"
+              className="w-full h-9 px-3 text-xs sm:text-sm font-bold rounded-xl bg-crimson text-white hover:bg-[#991B1B] active:scale-[0.98] shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
-              {actionType === "add" ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Adding...</span>
-                </>
-              ) : (
-                <>
-                  <FaPlus className="text-[11px]" />
-                  <span>Add</span>
-                </>
-              )}
+              <FaPlus className="text-[11px]" />
+              <span>Add</span>
             </button>
           ) : (
             <div className="flex items-center justify-between w-full h-9 bg-red-50/90 border border-crimson/25 rounded-xl px-1">
               <button
                 type="button"
                 onClick={handleDecrement}
-                disabled={actionType !== null}
-                className="w-7 h-7 rounded-lg bg-white text-crimson hover:bg-crimson hover:text-white border border-red-100 flex items-center justify-center font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                className="w-7 h-7 rounded-lg bg-white text-crimson hover:bg-crimson hover:text-white border border-red-100 flex items-center justify-center font-bold shadow-xs transition-colors cursor-pointer active:scale-95 shrink-0"
                 title={cartQty === 1 ? "Remove from cart" : "Decrease quantity"}
                 aria-label="Decrease quantity"
               >
-                {actionType === "dec" ? (
-                  <span className="w-2.5 h-2.5 border-2 border-crimson border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <FaMinus className="text-[9px]" />
-                )}
+                <FaMinus className="text-[9px]" />
               </button>
 
-              <span className="text-xs sm:text-sm font-extrabold text-crimson px-2 select-none">
-                {cartQty}
-              </span>
+              <div className="flex-1 mx-1.5 flex items-center justify-center">
+                <input
+                  ref={inputRef}
+                  type="number"
+                  min="0"
+                  max="999"
+                  value={isEditing ? tempQty : cartQty}
+                  onFocus={(e) => {
+                    setIsEditing(true);
+                    setTempQty(cartQty.toString());
+                    e.target.select();
+                  }}
+                  onBlur={() => {
+                    setIsEditing(false);
+                    if (tempQty === "" || parseInt(tempQty, 10) <= 0) {
+                      removeFromCart(product.id || product.slug);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      inputRef.current?.blur();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTempQty(val);
+                    const parsed = parseInt(val, 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                      updateQuantity(product.id || product.slug, parsed);
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-[60px] h-7 px-1 text-center text-xs sm:text-sm font-black text-crimson bg-white border border-crimson/40 rounded-lg shadow-2xs outline-none focus:ring-2 focus:ring-crimson focus:border-crimson"
+                  aria-label="Quantity"
+                  title="Type quantity directly"
+                  placeholder="Qty"
+                />
+              </div>
 
               <button
                 type="button"
                 onClick={handleIncrement}
-                disabled={actionType !== null}
-                className="w-7 h-7 rounded-lg bg-crimson text-white hover:bg-[#991B1B] flex items-center justify-center font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                className="w-7 h-7 rounded-lg bg-crimson text-white hover:bg-[#991B1B] flex items-center justify-center font-bold shadow-xs transition-colors cursor-pointer active:scale-95 shrink-0"
                 title="Increase quantity"
                 aria-label="Increase quantity"
               >
-                {actionType === "inc" ? (
-                  <span className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <FaPlus className="text-[9px]" />
-                )}
+                <FaPlus className="text-[9px]" />
               </button>
             </div>
           )}
@@ -258,4 +256,4 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
       </div>
     </div>
   );
-}
+});
